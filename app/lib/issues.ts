@@ -602,6 +602,11 @@ const SEED: Issue[] = [
   },
 ];
 
+/** Seed issues (for server-side uses like OG image generation). */
+export function seedIssues(): Issue[] {
+  return deepClone(SEED).map(normalizeIssue);
+}
+
 /* ---------- persistence ---------- */
 
 const ISSUES_KEY = "fixmycampus.issues.v2";

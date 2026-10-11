@@ -74,6 +74,25 @@ export default function CommentsSection({
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-faint">
           Add to the discussion
         </p>
+        {isStewardSession() && (
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="Steward quick replies">
+            {[
+              "Crew dispatched — we'll update once on site.",
+              "Parts ordered. Expect a fix within 2–3 working days.",
+              "Fixed — please verify and let us know if it recurs.",
+              "Need a bit more detail: exact room/spot and a photo would help.",
+            ].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setText((v) => (v ? `${v}\n${t}` : t))}
+                className="cursor-pointer rounded-[3px] border border-line bg-paper px-3 py-1.5 text-left text-[12px] font-medium text-soot transition-colors hover:border-ink hover:text-ink"
+              >
+                {t.length > 42 ? `${t.slice(0, 42)}…` : t}
+              </button>
+            ))}
+          </div>
+        )}
         <label htmlFor="comment-text" className="sr-only">
           Your comment
         </label>

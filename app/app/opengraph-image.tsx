@@ -45,9 +45,11 @@ export default function OgImage() {
             FixMyCampus
           </div>
         </div>
-        <div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
+              display: "flex",
+              flexDirection: "column",
               fontSize: 84,
               fontWeight: 700,
               lineHeight: 1.05,
@@ -55,9 +57,11 @@ export default function OgImage() {
               color: "#1c1917",
             }}
           >
-            See it. <span style={{ color: "#c93e1c" }}>Report it.</span>
-            <br />
-            Get it fixed.
+            <div style={{ display: "flex" }}>
+              <div>See it.&nbsp;</div>
+              <div style={{ color: "#c93e1c" }}>Report it.</div>
+            </div>
+            <div>Get it fixed.</div>
           </div>
           <div
             style={{

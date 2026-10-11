@@ -22,6 +22,7 @@ const grotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fixmycampus-rohanv2007s-projects.vercel.app"),
   title: {
     default: "FixMyCampus — See it. Report it. Get it fixed.",
     template: "%s · FixMyCampus",

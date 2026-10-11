@@ -22,6 +22,9 @@ export default function SiteFooter() {
             <Link href="/issues" className="text-paper/70 transition-colors hover:text-paper">
               The Board
             </Link>
+            <Link href="/map" className="text-paper/70 transition-colors hover:text-paper">
+              Map
+            </Link>
             <Link href="/report" className="text-paper/70 transition-colors hover:text-paper">
               Report
             </Link>

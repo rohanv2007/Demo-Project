@@ -7,18 +7,19 @@ import { usePathname } from "next/navigation";
 export function PinMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
-      <rect width="64" height="64" rx="14" fill="#D64520" />
+      <rect width="64" height="64" rx="14" fill="#c93e1c" />
       <path
         d="M32 10c-8.8 0-15 6.4-15 14.6C17 35.4 32 54 32 54s15-18.6 15-29.4C47 16.4 40.8 10 32 10z"
         fill="#FCF9F1"
       />
-      <circle cx="32" cy="24.6" r="6.2" fill="#D64520" />
+      <circle cx="32" cy="24.6" r="6.2" fill="#c93e1c" />
     </svg>
   );
 }
 
 const LINKS = [
   { href: "/issues", label: "The Board" },
+  { href: "/map", label: "Map" },
   { href: "/report", label: "Report" },
   { href: "/steward", label: "Stewards" },
 ];

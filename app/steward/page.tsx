@@ -6,6 +6,8 @@ import { useIssues } from "@/hooks/useIssues";
 import {
   STATUSES,
   STATUS_LABEL,
+  daysOpen,
+  timeAgo,
   updateIssueStatus,
   type Issue,
   type Status,
@@ -13,6 +15,7 @@ import {
 import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
 import StatusPill from "@/components/StatusPill";
+import StewardStats from "@/components/StewardStats";
 
 const DEMO_PASSCODE = "fixit2026";
 const GATE_KEY = "fixmycampus.steward.v1";
@@ -42,6 +45,14 @@ function StewardRow({ issue, onUpdated }: { issue: Issue; onUpdated: () => void 
           </Link>
           <p className="mt-1 text-[12px] uppercase tracking-[0.14em] text-faint">
             {issue.location} · {issue.upvotes} upvotes · {issue.reporter}
+            <span
+              className={cn(
+                "ml-2 font-bold",
+                daysOpen(issue) >= 7 ? "text-ember" : "text-faint",
+              )}
+            >
+              · {daysOpen(issue)}d open
+            </span>
           </p>
         </div>
         <StatusPill status={issue.status} />
@@ -83,6 +94,7 @@ export default function StewardPage() {
   );
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
+  const [query, setQuery] = useState("");
 
   function unlock(e: React.FormEvent) {
     e.preventDefault();
@@ -153,7 +165,14 @@ export default function StewardPage() {
 
   const open = issues.filter((i) => i.status !== "fixed");
   const done = issues.filter((i) => i.status === "fixed");
-  const ordered = [...open].sort((a, b) => b.upvotes - a.upvotes);
+  const q = query.trim().toLowerCase();
+  const ordered = [...open]
+    .filter(
+      (i) =>
+        !q ||
+        `${i.title} ${i.location} ${i.category} ${i.reporter}`.toLowerCase().includes(q),
+    )
+    .sort((a, b) => b.upvotes - a.upvotes);
 
   return (
     <div className="mx-auto max-w-5xl px-5 pb-8 pt-12 md:pt-16">
@@ -172,7 +191,37 @@ export default function StewardPage() {
         public timeline.
       </p>
 
-      <div className="mt-8 space-y-4">
+      <StewardStats issues={issues} />
+
+      <div className="mt-10">
+        <label className="relative block max-w-md">
+          <span className="sr-only">Search the queue</span>
+          <svg
+            viewBox="0 0 20 20"
+            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="9" r="6" />
+            <path d="m13.5 13.5 4 4" strokeLinecap="round" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search the queue…"
+            className="w-full rounded-[3px] border border-line bg-cream py-2.5 pl-11 pr-4 text-[14px] placeholder:text-faint/70 focus:border-ink focus:outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {ordered.length === 0 && (
+          <p className="rounded-[4px] border border-dashed border-faint/60 bg-cream/60 px-5 py-10 text-center text-[14px] text-soot">
+            {q ? "No queue items match that search." : "The queue is clear."}
+          </p>
+        )}
         {ordered.map((issue) => (
           <StewardRow key={issue.id} issue={issue} onUpdated={refresh} />
         ))}
@@ -197,6 +246,55 @@ export default function StewardPage() {
           </div>
         </>
       )}
+
+      <ActivityFeed issues={issues} />
     </div>
+  );
+}
+
+function ActivityFeed({ issues }: { issues: Issue[] }) {
+  const events = issues
+    .flatMap((i) =>
+      i.timeline.map((t) => ({ issue: i, event: t })),
+    )
+    .sort((a, b) => +new Date(b.event.at) - +new Date(a.event.at))
+    .slice(0, 8);
+
+  return (
+    <section aria-label="Recent activity" className="mt-12">
+      <h2 className="font-display text-[24px] font-semibold tracking-tight">
+        Recent activity
+      </h2>
+      <p className="mt-1 text-[14px] text-faint">
+        Every status change across the board, newest first.
+      </p>
+      <ol className="mt-6 divide-y divide-line border-y border-line">
+        {events.map(({ issue, event }, idx) => (
+          <li key={`${issue.id}-${event.at}-${idx}`}>
+            <Link
+              href={`/issues/${issue.id}`}
+              className="group flex items-baseline justify-between gap-4 px-2 py-3.5 transition-colors hover:bg-cream"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-[14px] font-medium group-hover:text-signal">
+                  {issue.title}
+                </p>
+                <p className="mt-0.5 truncate text-[13px] text-faint">
+                  {event.note}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="hidden text-[12px] uppercase tracking-[0.12em] text-faint sm:inline">
+                  {STATUS_LABEL[event.status]}
+                </span>
+                <span className="text-[12px] tabular-nums text-faint">
+                  {timeAgo(event.at)}
+                </span>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

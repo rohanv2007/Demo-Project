@@ -27,7 +27,7 @@ export default function UpvoteButton({
         "group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[3px] border font-semibold transition-all duration-200",
         size === "lg" ? "px-4 py-2.5 text-sm" : "px-3 py-1.5 text-[13px]",
         active
-          ? "border-signal bg-signal text-cream shadow-[0_6px_16px_-8px_rgba(214,69,32,0.8)]"
+          ? "border-signal bg-signal text-cream"
           : "border-line bg-cream text-soot hover:-translate-y-0.5 hover:border-ink hover:text-ink",
       )}
     >

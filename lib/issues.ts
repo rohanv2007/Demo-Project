@@ -16,6 +16,18 @@ export interface TimelineEvent {
   at: string;
 }
 
+export interface Comment {
+  id: string;
+  author: string;
+  text: string;
+  at: string;
+}
+
+export interface MapPoint {
+  x: number;
+  y: number;
+}
+
 export interface Issue {
   id: string;
   title: string;
@@ -28,6 +40,9 @@ export interface Issue {
   upvotes: number;
   status: Status;
   timeline: TimelineEvent[];
+  comments: Comment[];
+  map: MapPoint;
+  photo?: string;
 }
 
 export const CATEGORIES: Category[] = [
@@ -53,6 +68,36 @@ export const STATUS_LABEL: Record<Status, string> = {
   fixed: "Fixed",
 };
 
+/** Named campus zones used by the schematic map and the report form. */
+export interface CampusZone {
+  name: string;
+  x: number;
+  y: number;
+}
+
+export const CAMPUS_ZONES: CampusZone[] = [
+  { name: "Central Library", x: 500, y: 340 },
+  { name: "CSE Block", x: 250, y: 300 },
+  { name: "EEE Block", x: 250, y: 480 },
+  { name: "ME Block", x: 140, y: 560 },
+  { name: "ECE Block", x: 400, y: 190 },
+  { name: "Admin Block", x: 710, y: 450 },
+  { name: "Boys Hostel", x: 860, y: 240 },
+  { name: "Food Court", x: 620, y: 520 },
+  { name: "Canteen", x: 690, y: 590 },
+  { name: "Bus Bay", x: 860, y: 600 },
+  { name: "Open-air Theatre", x: 450, y: 560 },
+  { name: "Sports Ground", x: 620, y: 120 },
+];
+
+export function zoneForLocation(location: string): CampusZone {
+  const l = location.toLowerCase();
+  const hit = CAMPUS_ZONES.find((z) =>
+    l.includes(z.name.toLowerCase().replace(" block", "").replace("central ", "")),
+  );
+  return hit ?? CAMPUS_ZONES[0];
+}
+
 const SEED: Issue[] = [
   {
     id: "iss-wifi-library",
@@ -69,6 +114,21 @@ const SEED: Issue[] = [
     timeline: [
       { status: "reported", note: "Report filed by Divya S.", at: "2026-10-09T09:14:00+05:30" },
     ],
+    comments: [
+      {
+        id: "cmt-wifi-1",
+        author: "Karthik M",
+        text: "Same on the third-floor reading room — the login portal just loops there too. It is not only the second floor.",
+        at: "2026-10-09T18:22:00+05:30",
+      },
+      {
+        id: "cmt-wifi-2",
+        author: "Divya S",
+        text: "Bumping this — CAT 2 starts 22 October and the reading hall is full every evening. These access points need a look this week.",
+        at: "2026-10-10T08:05:00+05:30",
+      },
+    ],
+    map: { x: 500, y: 340 },
   },
   {
     id: "iss-streetlight-busbay",
@@ -90,6 +150,15 @@ const SEED: Issue[] = [
         at: "2026-10-08T11:05:00+05:30",
       },
     ],
+    comments: [
+      {
+        id: "cmt-lamp-1",
+        author: "Meera R",
+        text: "Walked this stretch at 7 PM yesterday — completely dark in the middle. A few first-years have started taking the longer route around the admin block instead.",
+        at: "2026-10-08T20:14:00+05:30",
+      },
+    ],
+    map: { x: 810, y: 585 },
   },
   {
     id: "iss-tubelight-204",
@@ -116,6 +185,15 @@ const SEED: Issue[] = [
         at: "2026-10-10T15:20:00+05:30",
       },
     ],
+    comments: [
+      {
+        id: "cmt-tube-1",
+        author: "Arun K",
+        text: "Update from today: the electrician was in during the lunch hour measuring the fittings. Looks like this is actually moving.",
+        at: "2026-10-10T13:40:00+05:30",
+      },
+    ],
+    map: { x: 250, y: 300 },
   },
   {
     id: "iss-cn-lab-pcs",
@@ -142,6 +220,8 @@ const SEED: Issue[] = [
         at: "2026-10-10T10:45:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 310, y: 345 },
   },
   {
     id: "iss-cooler-foodcourt",
@@ -163,6 +243,8 @@ const SEED: Issue[] = [
         at: "2026-10-06T10:22:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 620, y: 520 },
   },
   {
     id: "iss-mosquito-canteen",
@@ -179,6 +261,8 @@ const SEED: Issue[] = [
     timeline: [
       { status: "reported", note: "Report filed anonymously.", at: "2026-10-03T17:55:00+05:30" },
     ],
+    comments: [],
+    map: { x: 700, y: 595 },
   },
   {
     id: "iss-desk-112",
@@ -205,6 +289,8 @@ const SEED: Issue[] = [
         at: "2026-10-09T16:40:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 250, y: 480 },
   },
   {
     id: "iss-dustbin-admin",
@@ -221,6 +307,8 @@ const SEED: Issue[] = [
     timeline: [
       { status: "reported", note: "Report filed by Ravi T.", at: "2026-10-10T08:50:00+05:30" },
     ],
+    comments: [],
+    map: { x: 735, y: 470 },
   },
   {
     id: "iss-bench-oat",
@@ -237,6 +325,8 @@ const SEED: Issue[] = [
     timeline: [
       { status: "reported", note: "Report filed by Vikram S.", at: "2026-10-06T18:12:00+05:30" },
     ],
+    comments: [],
+    map: { x: 450, y: 560 },
   },
   {
     id: "iss-fan-wobble",
@@ -268,6 +358,8 @@ const SEED: Issue[] = [
         at: "2026-09-25T11:15:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 140, y: 560 },
   },
   {
     id: "iss-tap-hostel",
@@ -299,6 +391,8 @@ const SEED: Issue[] = [
         at: "2026-10-03T09:20:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 860, y: 240 },
   },
   {
     id: "iss-projector-ece",
@@ -330,13 +424,16 @@ const SEED: Issue[] = [
         at: "2026-10-04T10:05:00+05:30",
       },
     ],
+    comments: [],
+    map: { x: 400, y: 190 },
   },
 ];
 
 /* ---------- persistence ---------- */
 
-const ISSUES_KEY = "fixmycampus.issues.v1";
+const ISSUES_KEY = "fixmycampus.issues.v2";
 const UPVOTED_KEY = "fixmycampus.upvoted.v1";
+const MINE_KEY = "fixmycampus.my-issues.v1";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -346,19 +443,36 @@ function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
+/** Backfills fields that older stored payloads may lack. */
+function normalizeIssue(i: Issue): Issue {
+  const anyIssue = i as unknown as Record<string, unknown>;
+  const map =
+    anyIssue.map && typeof anyIssue.map === "object"
+      ? (anyIssue.map as MapPoint)
+      : (() => {
+          const z = zoneForLocation(i.location ?? "");
+          return { x: z.x, y: z.y };
+        })();
+  return {
+    ...i,
+    comments: Array.isArray(anyIssue.comments) ? (anyIssue.comments as Comment[]) : [],
+    map,
+  };
+}
+
 export function loadIssues(): Issue[] {
-  if (!isBrowser()) return deepClone(SEED);
+  if (!isBrowser()) return deepClone(SEED).map(normalizeIssue);
   try {
     const raw = window.localStorage.getItem(ISSUES_KEY);
     if (!raw) {
       window.localStorage.setItem(ISSUES_KEY, JSON.stringify(SEED));
-      return deepClone(SEED);
+      return deepClone(SEED).map(normalizeIssue);
     }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) throw new Error("bad shape");
-    return parsed;
+    return (parsed as Issue[]).map(normalizeIssue);
   } catch {
-    return deepClone(SEED);
+    return deepClone(SEED).map(normalizeIssue);
   }
 }
 
@@ -375,6 +489,21 @@ export function loadUpvoted(): string[] {
   } catch {
     return [];
   }
+}
+
+export function loadMyIssueIds(): string[] {
+  if (!isBrowser()) return [];
+  try {
+    const raw = window.localStorage.getItem(MINE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMyIssueIds(ids: string[]): void {
+  if (!isBrowser()) return;
+  window.localStorage.setItem(MINE_KEY, JSON.stringify(ids));
 }
 
 function saveUpvoted(ids: string[]): void {
@@ -401,11 +530,17 @@ export interface NewIssueInput {
   description: string;
   urgency: Urgency;
   reporter: string;
+  zone: string;
+  photo?: string;
 }
 
 export function addIssue(input: NewIssueInput): Issue {
   const issues = loadIssues();
   const now = new Date().toISOString();
+  const z =
+    CAMPUS_ZONES.find((zone) => zone.name === input.zone) ??
+    zoneForLocation(input.location);
+  const jitter = () => (Math.random() - 0.5) * 56;
   const issue: Issue = {
     id: `iss-${Date.now().toString(36)}`,
     title: input.title.trim(),
@@ -417,12 +552,19 @@ export function addIssue(input: NewIssueInput): Issue {
     createdAt: now,
     upvotes: 1,
     status: "reported",
+    comments: [],
+    photo: input.photo,
+    map: {
+      x: Math.round(Math.min(960, Math.max(40, z.x + jitter()))),
+      y: Math.round(Math.min(660, Math.max(40, z.y + jitter()))),
+    },
     timeline: [{ status: "reported", note: `Report filed by ${input.reporter.trim() || "Anonymous"}.`, at: now }],
   };
   const next = [issue, ...issues];
   saveIssues(next);
   const upvoted = [...loadUpvoted(), issue.id];
   saveUpvoted(upvoted);
+  saveMyIssueIds([...loadMyIssueIds(), issue.id]);
   return issue;
 }
 
@@ -435,6 +577,29 @@ export function updateIssueStatus(id: string, status: Status, note: string): Iss
           ...i,
           status,
           timeline: [...i.timeline, { status, note: note.trim() || STATUS_LABEL[status], at: now }],
+        }
+      : i,
+  );
+  saveIssues(next);
+  return next;
+}
+
+export function addComment(issueId: string, author: string, text: string): Issue[] {
+  const issues = loadIssues();
+  const now = new Date().toISOString();
+  const next = issues.map((i) =>
+    i.id === issueId
+      ? {
+          ...i,
+          comments: [
+            ...(i.comments ?? []),
+            {
+              id: `cmt-${Date.now().toString(36)}`,
+              author: author.trim() || "Anonymous",
+              text: text.trim(),
+              at: now,
+            },
+          ],
         }
       : i,
   );
@@ -495,4 +660,55 @@ export function formatDate(iso: string): string {
     month: "short",
     year: "numeric",
   });
+}
+
+/* ---------- engagement ---------- */
+
+/** Whole days an issue has been (or was) open. */
+export function daysOpen(issue: Issue): number {
+  const start = new Date(issue.createdAt).getTime();
+  const endEvent =
+    issue.status === "fixed"
+      ? [...issue.timeline].reverse().find((t) => t.status === "fixed")
+      : undefined;
+  const end = endEvent ? new Date(endEvent.at).getTime() : Date.now();
+  return Math.max(0, Math.round((end - start) / 86_400_000));
+}
+
+const STOP_WORDS = new Set([
+  "the", "a", "an", "in", "on", "of", "to", "for", "and", "is", "are",
+  "it", "this", "that", "with", "at", "by", "from", "as", "be", "has",
+  "have", "was", "were", "or", "not", "but", "they", "their", "them",
+  "we", "you", "your", "our", "its", "my", "an",
+]);
+
+function tokens(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !STOP_WORDS.has(w)),
+  );
+}
+
+/**
+ * Finds existing issues that look like duplicates of a draft title,
+ * using cosine similarity over keyword tokens. Used on the report form
+ * to nudge reporters toward upvoting instead of re-filing.
+ */
+export function findSimilarIssues(query: string, issues: Issue[], limit = 2): Issue[] {
+  const q = tokens(query);
+  if (q.size === 0) return [];
+  return issues
+    .map((i) => {
+      const t = tokens(`${i.title} ${i.location} ${i.category}`);
+      if (t.size === 0) return { i, score: 0 };
+      const inter = [...q].filter((w) => t.has(w)).length;
+      return { i, score: inter / Math.sqrt(q.size * t.size) };
+    })
+    .filter((x) => x.score > 0.22)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.i);
 }

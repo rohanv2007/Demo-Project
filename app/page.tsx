@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useIssues } from "@/hooks/useIssues";
 import { boardStats } from "@/lib/issues";
 import Kicker from "@/components/Kicker";
@@ -34,7 +35,7 @@ const STEPS = [
 ];
 
 export default function Home() {
-  const { issues, upvotedIds, ready, toggleUpvote } = useIssues();
+  const { issues, upvotedIds, myIssueIds, ready, toggleUpvote } = useIssues();
   const stats = boardStats(issues);
   const fixed = issues.filter((i) => i.status === "fixed");
   const fresh = issues
@@ -154,6 +155,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---------- This week ---------- */}
+      <WeekSection issues={issues} />
+
       {/* ---------- Fresh on the board ---------- */}
       <section className="mx-auto max-w-6xl px-5 pb-4">
         <div className="flex items-end justify-between gap-4">
@@ -177,6 +181,7 @@ export default function Home() {
               issue={issue}
               upvoted={upvotedIds.includes(issue.id)}
               onToggleUpvote={toggleUpvote}
+              mine={myIssueIds.includes(issue.id)}
             />
           ))}
         </div>
@@ -223,5 +228,82 @@ export default function Home() {
         </div>
       </section>
     </div>
+  );
+}
+
+function WeekSection({ issues }: { issues: import("@/lib/issues").Issue[] }) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+  if (now === null) return null;
+  const weekAgo = now - 7 * 86_400_000;
+  const fresh = issues
+    .filter((i) => +new Date(i.createdAt) >= weekAgo)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const fixedThisWeek = issues.filter((i) => {
+    if (i.status !== "fixed") return false;
+    const ev = [...i.timeline].reverse().find((t) => t.status === "fixed");
+    return ev ? +new Date(ev.at) >= weekAgo : false;
+  });
+  if (fresh.length === 0 && fixedThisWeek.length === 0) return null;
+
+  return (
+    <section className="border-y border-line bg-cream/60">
+      <div className="mx-auto max-w-6xl px-5 py-12 md:py-16">
+        <Kicker>This week</Kicker>
+        <div className="mt-6 grid gap-8 md:grid-cols-2">
+          <div>
+            <p className="flex items-baseline gap-3">
+              <span className="font-display text-[44px] font-semibold tabular-nums">
+                {fresh.length}
+              </span>
+              <span className="text-[13px] font-semibold uppercase tracking-[0.16em] text-faint">
+                new reports
+              </span>
+            </p>
+            <ul className="mt-4 space-y-2">
+              {fresh.slice(0, 3).map((i) => (
+                <li key={i.id}>
+                  <Link
+                    href={`/issues/${i.id}`}
+                    className="u-sweep text-[14px] font-medium"
+                  >
+                    {i.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="flex items-baseline gap-3">
+              <span className="font-display text-[44px] font-semibold tabular-nums text-moss">
+                {fixedThisWeek.length}
+              </span>
+              <span className="text-[13px] font-semibold uppercase tracking-[0.16em] text-faint">
+                fixed
+              </span>
+            </p>
+            <ul className="mt-4 space-y-2">
+              {fixedThisWeek.slice(0, 3).map((i) => (
+                <li key={i.id}>
+                  <Link
+                    href={`/issues/${i.id}`}
+                    className="u-sweep text-[14px] font-medium"
+                  >
+                    {i.title}
+                  </Link>
+                </li>
+              ))}
+              {fixedThisWeek.length === 0 && (
+                <li className="text-[14px] text-faint">
+                  Nothing closed yet — the queue is being worked.
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

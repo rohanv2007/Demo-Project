@@ -5,6 +5,7 @@ import { useIssues } from "@/hooks/useIssues";
 import {
   CATEGORIES,
   STATUSES,
+  daysOpen,
   type Category,
   type Status,
 } from "@/lib/issues";
@@ -12,19 +13,29 @@ import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
 import IssueCard from "@/components/IssueCard";
 import EmptyState from "@/components/EmptyState";
+import { SkeletonCard } from "@/components/Skeleton";
 
-type Sort = "top" | "new";
+type Sort = "top" | "new" | "oldest" | "recent-fixed";
+
+const SORT_LABELS: { value: Sort; label: string }[] = [
+  { value: "top", label: "Most upvoted" },
+  { value: "new", label: "Newest" },
+  { value: "oldest", label: "Oldest open" },
+  { value: "recent-fixed", label: "Recently fixed" },
+];
 
 export default function BoardPage() {
-  const { issues, upvotedIds, ready, toggleUpvote } = useIssues();
+  const { issues, upvotedIds, myIssueIds, ready, toggleUpvote } = useIssues();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Status | "all">("all");
   const [category, setCategory] = useState<Category | "all">("all");
   const [sort, setSort] = useState<Sort>("top");
+  const [mineOnly, setMineOnly] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = issues.filter((i) => {
+      if (mineOnly && !myIssueIds.includes(i.id)) return false;
       if (status !== "all" && i.status !== status) return false;
       if (category !== "all" && i.category !== category) return false;
       if (
@@ -36,13 +47,19 @@ export default function BoardPage() {
         return false;
       return true;
     });
-    list = [...list].sort((a, b) =>
-      sort === "top"
-        ? b.upvotes - a.upvotes || +new Date(b.createdAt) - +new Date(a.createdAt)
-        : +new Date(b.createdAt) - +new Date(a.createdAt),
-    );
+    list = [...list].sort((a, b) => {
+      if (sort === "top")
+        return b.upvotes - a.upvotes || +new Date(b.createdAt) - +new Date(a.createdAt);
+      if (sort === "new") return +new Date(b.createdAt) - +new Date(a.createdAt);
+      if (sort === "oldest") return daysOpen(b) - daysOpen(a);
+      const aFixed = [...a.timeline].reverse().find((t) => t.status === "fixed");
+      const bFixed = [...b.timeline].reverse().find((t) => t.status === "fixed");
+      return (
+        (bFixed ? +new Date(bFixed.at) : 0) - (aFixed ? +new Date(aFixed.at) : 0)
+      );
+    });
     return list;
-  }, [issues, query, status, category, sort]);
+  }, [issues, query, status, category, sort, mineOnly, myIssueIds]);
 
   const openCount = issues.filter((i) => i.status !== "fixed").length;
 
@@ -80,20 +97,34 @@ export default function BoardPage() {
             className="w-full rounded-[3px] border border-line bg-cream py-3 pl-11 pr-4 text-[15px] placeholder:text-faint/70 focus:border-ink focus:outline-none"
           />
         </label>
-        <div className="flex rounded-[3px] border border-line bg-cream p-1 text-[13px] font-semibold">
-          {(["top", "new"] as Sort[]).map((s) => (
+        <div className="thin-scroll flex overflow-x-auto rounded-[3px] border border-line bg-cream p-1 text-[13px] font-semibold">
+          {SORT_LABELS.map((s) => (
             <button
-              key={s}
-              onClick={() => setSort(s)}
+              key={s.value}
+              onClick={() => setSort(s.value)}
               className={cn(
-                "cursor-pointer rounded-[2px] px-4 py-2 transition-colors",
-                sort === s ? "bg-ink text-cream" : "text-soot hover:text-ink",
+                "cursor-pointer whitespace-nowrap rounded-[2px] px-4 py-2 transition-colors",
+                sort === s.value ? "bg-ink text-cream" : "text-soot hover:text-ink",
               )}
             >
-              {s === "top" ? "Most upvoted" : "Newest"}
+              {s.label}
             </button>
           ))}
         </div>
+        {myIssueIds.length > 0 && (
+          <button
+            onClick={() => setMineOnly((v) => !v)}
+            aria-pressed={mineOnly}
+            className={cn(
+              "cursor-pointer whitespace-nowrap rounded-[3px] border px-4 py-2 text-[13px] font-semibold transition-colors",
+              mineOnly
+                ? "border-signal bg-signal text-cream"
+                : "border-line bg-cream text-soot hover:border-ink",
+            )}
+          >
+            My reports ({myIssueIds.length})
+          </button>
+        )}
       </div>
 
       {/* Status filter */}
@@ -134,7 +165,13 @@ export default function BoardPage() {
 
       {/* Grid */}
       <div className="mt-8">
-        {filtered.length > 0 ? (
+        {!ready ? (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-label="Loading">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : filtered.length > 0 ? (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((issue) => (
               <IssueCard
@@ -142,6 +179,7 @@ export default function BoardPage() {
                 issue={issue}
                 upvoted={upvotedIds.includes(issue.id)}
                 onToggleUpvote={toggleUpvote}
+                mine={myIssueIds.includes(issue.id)}
               />
             ))}
           </div>

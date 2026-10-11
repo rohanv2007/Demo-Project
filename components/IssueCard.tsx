@@ -9,10 +9,12 @@ export default function IssueCard({
   issue,
   upvoted,
   onToggleUpvote,
+  mine = false,
 }: {
   issue: Issue;
   upvoted: boolean;
   onToggleUpvote: (id: string) => void;
+  mine?: boolean;
 }) {
   return (
     <Link
@@ -23,7 +25,14 @@ export default function IssueCard({
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">
           {issue.category} <span className="mx-1 text-line">·</span> {issue.location}
         </p>
-        <StatusPill status={issue.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          {mine && (
+            <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cream">
+              Yours
+            </span>
+          )}
+          <StatusPill status={issue.status} />
+        </div>
       </div>
       <h3 className="mt-3 font-display text-[21px] font-semibold leading-snug tracking-tight">
         {issue.title}

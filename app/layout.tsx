@@ -40,12 +40,22 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  themeColor: "#f6f1e5",
+};
+
 export default function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fraunces.variable} ${grotesk.variable}`}>
       <body className="min-h-screen flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[3px] focus:bg-ink focus:px-4 focus:py-2 focus:text-[13px] focus:font-semibold focus:text-cream"
+        >
+          Skip to content
+        </a>
         <SiteHeader />
-        <main className="flex-1">{props.children}</main>
+        <main id="main-content" className="flex-1">{props.children}</main>
         <SiteFooter />
       </body>
     </html>

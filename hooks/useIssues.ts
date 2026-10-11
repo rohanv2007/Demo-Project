@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   loadIssues,
+  loadMyIssueIds,
   loadUpvoted,
   toggleUpvote as storeToggleUpvote,
   type Issue,
@@ -15,11 +16,13 @@ import {
 export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [upvotedIds, setUpvotedIds] = useState<string[]>([]);
+  const [myIssueIds, setMyIssueIds] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setIssues(loadIssues());
     setUpvotedIds(loadUpvoted());
+    setMyIssueIds(loadMyIssueIds());
     setReady(true);
   }, []);
 
@@ -34,7 +37,8 @@ export function useIssues() {
   const refresh = useCallback(() => {
     setIssues(loadIssues());
     setUpvotedIds(loadUpvoted());
+    setMyIssueIds(loadMyIssueIds());
   }, []);
 
-  return { issues, upvotedIds, ready, toggleUpvote, refresh };
+  return { issues, upvotedIds, myIssueIds, ready, toggleUpvote, refresh };
 }

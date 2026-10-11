@@ -1,16 +1,18 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useIssues } from "@/hooks/useIssues";
-import { STATUS_LABEL, formatDate, timeAgo, type Status } from "@/lib/issues";
+import { STATUS_LABEL, daysOpen, formatDate, timeAgo, type Status } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
 import StatusPill from "@/components/StatusPill";
 import UpvoteButton from "@/components/UpvoteButton";
 import IssueCard from "@/components/IssueCard";
 import EmptyState from "@/components/EmptyState";
+import CommentsSection from "@/components/CommentsSection";
+import ShareButton from "@/components/ShareButton";
 
 const URGENCY_STYLE: Record<string, string> = {
   low: "border-line text-soot",
@@ -41,8 +43,11 @@ export default function IssueDetailPage() {
 
 function DetailInner() {
   const params = useParams<{ id: string }>();
-  const { issues, upvotedIds, ready, toggleUpvote } = useIssues();
+  const searchParams = useSearchParams();
+  const [showFresh, setShowFresh] = useState(searchParams.get("fresh") === "1");
+  const { issues, upvotedIds, myIssueIds, ready, toggleUpvote, refresh } = useIssues();
   const issue = issues.find((i) => i.id === params.id);
+  const openDays = issue ? daysOpen(issue) : 0;
 
   if (!ready) {
     return (
@@ -69,8 +74,45 @@ function DetailInner() {
     .filter((i) => i.id !== issue.id && i.category === issue.category)
     .slice(0, 3);
 
+  const nearby = issues
+    .filter((i) => {
+      if (i.id === issue.id || !i.map || !issue.map) return false;
+      const dx = i.map.x - issue.map.x;
+      const dy = i.map.y - issue.map.y;
+      return Math.hypot(dx, dy) <= 170;
+    })
+    .sort((a, b) => {
+      const da = Math.hypot(a.map.x - issue.map!.x, a.map.y - issue.map!.y);
+      const db = Math.hypot(b.map.x - issue.map!.x, b.map.y - issue.map!.y);
+      return da - db;
+    })
+    .slice(0, 3);
+
   return (
     <div className="mx-auto max-w-6xl px-5 pb-8 pt-10 md:pt-14">
+      {showFresh && (
+        <div
+          className="mb-8 flex items-start justify-between gap-4 rounded-[4px] border border-moss/50 bg-moss/10 px-5 py-4"
+          role="status"
+        >
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.14em] text-moss">
+              Your report is live
+            </p>
+            <p className="mt-1 text-[14px] text-soot">
+              It is on the board and on the map. Share the link to rally upvotes —
+              the louder it gets, the faster it moves.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFresh(false)}
+            className="cursor-pointer shrink-0 text-[12px] font-semibold uppercase tracking-[0.12em] text-faint hover:text-ink"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       <Link
         href="/issues"
         className="u-sweep text-[13px] font-semibold uppercase tracking-[0.14em] text-soot"
@@ -101,9 +143,27 @@ function DetailInner() {
           <p className="mt-4 text-[13px] uppercase tracking-[0.14em] text-faint">
             Reported by {issue.reporter} · {timeAgo(issue.createdAt)} ·{" "}
             {formatDate(issue.createdAt)}
+            {myIssueIds.includes(issue.id) && (
+              <span className="ml-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold tracking-[0.14em] text-cream">
+                Your report
+              </span>
+            )}
           </p>
 
           <div className="mt-8 border-t border-line pt-8">
+            {issue.photo && (
+              <figure className="mb-8">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={issue.photo}
+                  alt={`Photo attached to report: ${issue.title}`}
+                  className="w-full rounded-[4px] border border-line object-cover"
+                />
+                <figcaption className="mt-2 text-[12px] uppercase tracking-[0.14em] text-faint">
+                  Attached by {issue.reporter}
+                </figcaption>
+              </figure>
+            )}
             {issue.description.split("\n").map((p, i) => (
               <p key={i} className="mb-4 text-[16px] leading-relaxed text-soot">
                 {p}
@@ -143,6 +203,12 @@ function DetailInner() {
               </li>
             ))}
           </ol>
+
+          <CommentsSection
+            issueId={issue.id}
+            initial={issue.comments}
+            onChanged={refresh}
+          />
         </article>
 
         {/* Sidebar */}
@@ -151,13 +217,14 @@ function DetailInner() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-faint">
               Back this report
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2.5">
               <UpvoteButton
                 size="lg"
                 count={issue.upvotes}
                 active={upvotedIds.includes(issue.id)}
                 onToggle={() => toggleUpvote(issue.id)}
               />
+              <ShareButton path={`/issues/${issue.id}`} />
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-soot">
               Upvotes push an issue up the board — the loudest problems get
@@ -169,6 +236,10 @@ function DetailInner() {
                 ["Location", issue.location],
                 ["Category", issue.category],
                 ["Reported by", issue.reporter],
+                [
+                  issue.status === "fixed" ? "Days to fix" : "Days open",
+                  `${openDays}d`,
+                ],
                 ["Report ID", issue.id.toUpperCase()],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4">
@@ -194,6 +265,35 @@ function DetailInner() {
                 issue={s}
                 upvoted={upvotedIds.includes(s.id)}
                 onToggleUpvote={toggleUpvote}
+                mine={myIssueIds.includes(s.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Nearby on the map */}
+      {nearby.length > 0 && (
+        <section className="mt-16">
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="font-display text-[26px] font-semibold tracking-tight">
+              Nearby on the map
+            </h2>
+            <Link
+              href="/map"
+              className="u-sweep hidden shrink-0 text-[13px] font-semibold uppercase tracking-[0.14em] text-soot md:inline-block"
+            >
+              Open the map →
+            </Link>
+          </div>
+          <div className="mt-6 grid gap-5 md:grid-cols-3">
+            {nearby.map((s) => (
+              <IssueCard
+                key={s.id}
+                issue={s}
+                upvoted={upvotedIds.includes(s.id)}
+                onToggleUpvote={toggleUpvote}
+                mine={myIssueIds.includes(s.id)}
               />
             ))}
           </div>

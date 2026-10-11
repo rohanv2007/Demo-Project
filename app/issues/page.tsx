@@ -32,6 +32,7 @@ export default function BoardPage() {
   const [category, setCategory] = useState<Category | "all">("all");
   const [sort, setSort] = useState<Sort>("top");
   const [mineOnly, setMineOnly] = useState(false);
+  const [backedOnly, setBackedOnly] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Press "/" anywhere to jump to search.
@@ -51,6 +52,7 @@ export default function BoardPage() {
     const q = query.trim().toLowerCase();
     let list = issues.filter((i) => {
       if (mineOnly && !myIssueIds.includes(i.id)) return false;
+      if (backedOnly && !upvotedIds.includes(i.id)) return false;
       if (status !== "all" && i.status !== status) return false;
       if (category !== "all" && i.category !== category) return false;
       if (
@@ -74,7 +76,7 @@ export default function BoardPage() {
       );
     });
     return list;
-  }, [issues, query, status, category, sort, mineOnly, myIssueIds]);
+  }, [issues, query, status, category, sort, mineOnly, backedOnly, myIssueIds, upvotedIds]);
 
   const openCount = issues.filter((i) => i.status !== "fixed").length;
 
@@ -94,13 +96,14 @@ export default function BoardPage() {
           </Link>
           <p className="flex items-center gap-3 text-[13px] uppercase tracking-[0.16em] text-faint">
           {ready ? `${filtered.length} shown · ${openCount} still open` : "Loading…"}
-          {(query || status !== "all" || category !== "all" || mineOnly) && (
+          {(query || status !== "all" || category !== "all" || mineOnly || backedOnly) && (
             <button
               onClick={() => {
                 setQuery("");
                 setStatus("all");
                 setCategory("all");
                 setMineOnly(false);
+                setBackedOnly(false);
               }}
               className="cursor-pointer normal-case tracking-normal text-signal hover:text-ember"
             >
@@ -160,6 +163,20 @@ export default function BoardPage() {
             )}
           >
             My reports ({myIssueIds.length})
+          </button>
+        )}
+        {upvotedIds.length > 0 && (
+          <button
+            onClick={() => setBackedOnly((v) => !v)}
+            aria-pressed={backedOnly}
+            className={cn(
+              "cursor-pointer whitespace-nowrap rounded-[3px] border px-4 py-2 text-[13px] font-semibold transition-colors",
+              backedOnly
+                ? "border-signal bg-signal text-cream"
+                : "border-line bg-cream text-soot hover:border-ink",
+            )}
+          >
+            Backed by you ({upvotedIds.length})
           </button>
         )}
       </div>

@@ -54,6 +54,9 @@ function StewardRow({ issue, onUpdated }: { issue: Issue; onUpdated: () => void 
               · {daysOpen(issue)}d open
             </span>
           </p>
+          <p className="mt-2 line-clamp-2 max-w-2xl text-[14px] leading-relaxed text-soot">
+            {issue.description}
+          </p>
         </div>
         <StatusPill status={issue.status} />
       </div>

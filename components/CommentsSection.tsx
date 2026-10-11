@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addComment, timeAgo, type Comment } from "@/lib/issues";
+import { addComment, isStewardSession, timeAgo, type Comment } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 
 export default function CommentsSection({
@@ -24,7 +24,7 @@ export default function CommentsSection({
       setError("Write a little more — at least a few characters.");
       return;
     }
-    const next = addComment(issueId, name, text);
+    const next = addComment(issueId, name, text, isStewardSession());
     const updated = next.find((i) => i.id === issueId);
     setComments(updated ? updated.comments : []);
     setText("");
@@ -46,9 +46,20 @@ export default function CommentsSection({
       {comments.length > 0 && (
         <ul className="mt-6 space-y-5">
           {comments.map((c) => (
-            <li key={c.id} className="border-l-2 border-line pl-4">
+            <li
+              key={c.id}
+              className={cn(
+                "border-l-2 pl-4",
+                c.steward ? "border-moss" : "border-line",
+              )}
+            >
               <p className="text-[13px] font-semibold">
                 {c.author}
+                {c.steward && (
+                  <span className="ml-2 rounded-[2px] bg-moss px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-cream">
+                    Steward
+                  </span>
+                )}
                 <span className="ml-2 font-normal text-faint">{timeAgo(c.at)}</span>
               </p>
               <p className="mt-1 max-w-xl text-[14px] leading-relaxed text-soot">

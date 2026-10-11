@@ -21,6 +21,7 @@ export interface Comment {
   author: string;
   text: string;
   at: string;
+  steward?: boolean;
 }
 
 export interface MapPoint {
@@ -126,6 +127,13 @@ const SEED: Issue[] = [
         author: "Divya S",
         text: "Bumping this — CAT 2 starts 22 October and the reading hall is full every evening. These access points need a look this week.",
         at: "2026-10-10T08:05:00+05:30",
+      },
+      {
+        id: "cmt-wifi-3",
+        author: "Estate Office",
+        text: "Acknowledged — the network team is replacing two access points on the second floor tomorrow morning. Will confirm once the portal stops looping.",
+        at: "2026-10-10T14:40:00+05:30",
+        steward: true,
       },
     ],
     map: { x: 500, y: 340 },
@@ -434,6 +442,16 @@ const SEED: Issue[] = [
 const ISSUES_KEY = "fixmycampus.issues.v2";
 const UPVOTED_KEY = "fixmycampus.upvoted.v1";
 const MINE_KEY = "fixmycampus.my-issues.v1";
+const STEWARD_KEY = "fixmycampus.steward.v1";
+
+export function isStewardSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(STEWARD_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -600,7 +618,12 @@ export function updateIssueStatus(id: string, status: Status, note: string): Iss
   return next;
 }
 
-export function addComment(issueId: string, author: string, text: string): Issue[] {
+export function addComment(
+  issueId: string,
+  author: string,
+  text: string,
+  steward = false,
+): Issue[] {
   const issues = loadIssues();
   const now = new Date().toISOString();
   const next = issues.map((i) =>
@@ -613,6 +636,7 @@ export function addComment(issueId: string, author: string, text: string): Issue
               id: `cmt-${Date.now().toString(36)}`,
               author: author.trim() || "Anonymous",
               text: text.trim(),
+              steward,
               at: now,
             },
           ],

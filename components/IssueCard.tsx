@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { timeAgo, type Issue } from "@/lib/issues";
+import { daysOpen, timeAgo, type Issue } from "@/lib/issues";
 import StatusPill from "./StatusPill";
 import UpvoteButton from "./UpvoteButton";
 
@@ -48,6 +48,11 @@ export default function IssueCard({
         />
         <span className="text-[12px] text-faint">
           {issue.reporter} · {timeAgo(issue.createdAt)}
+          {issue.status !== "fixed" && (
+            <span className={daysOpen(issue) >= 7 ? "font-semibold text-ember" : undefined}>
+              {" "}· {daysOpen(issue)}d open
+            </span>
+          )}
         </span>
       </div>
     </Link>

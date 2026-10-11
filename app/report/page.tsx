@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, type Category, type Issue, type Urgency } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
+import StatusPill from "@/components/StatusPill";
 
 const URGENCIES: { value: Urgency; label: string; hint: string }[] = [
   { value: "low", label: "Low", hint: "Annoying, but livable" },
@@ -231,15 +232,16 @@ export default function ReportPage() {
               </p>
               <ul className="mt-2 space-y-1.5">
                 {similar.map((s) => (
-                  <li key={s.id} className="text-[14px]">
+                  <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px]">
                     <Link
                       href={`/issues/${s.id}`}
                       className="u-sweep font-medium text-ink"
                     >
                       {s.title}
                     </Link>
-                    <span className="ml-2 text-faint">
-                      · {s.upvotes} upvotes — upvote it instead of filing again
+                    <StatusPill status={s.status} />
+                    <span className="text-faint">
+                      {s.upvotes} upvotes — back it instead of filing again
                     </span>
                   </li>
                 ))}

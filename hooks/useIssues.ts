@@ -24,6 +24,22 @@ export function useIssues() {
     setUpvotedIds(loadUpvoted());
     setMyIssueIds(loadMyIssueIds());
     setReady(true);
+
+    // Stay in sync when another tab changes the data (e.g. steward console
+    // open alongside the board during a demo).
+    function onStorage(e: StorageEvent) {
+      if (
+        e.key === "fixmycampus.issues.v2" ||
+        e.key === "fixmycampus.upvoted.v1" ||
+        e.key === "fixmycampus.my-issues.v1"
+      ) {
+        setIssues(loadIssues());
+        setUpvotedIds(loadUpvoted());
+        setMyIssueIds(loadMyIssueIds());
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const toggleUpvote = useCallback((id: string) => {

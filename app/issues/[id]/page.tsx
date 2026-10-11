@@ -157,6 +157,35 @@ function DetailInner() {
             )}
           </p>
 
+          {issue.status === "fixed" &&
+            (() => {
+              const ev = [...issue.timeline]
+                .reverse()
+                .find((t) => t.status === "fixed");
+              return (
+                <div className="mt-8 flex items-start gap-4 rounded-[4px] border border-moss/40 bg-moss/10 px-5 py-4">
+                  <span
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-moss text-cream"
+                    aria-hidden="true"
+                  >
+                    <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m3 8.5 3.2 3.2L13 5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-bold uppercase tracking-[0.14em] text-moss">
+                      Fixed{ev ? ` · ${formatDate(ev.at)}` : ""}
+                    </p>
+                    {ev?.note && (
+                      <p className="mt-1 text-[14px] leading-relaxed text-soot">
+                        {ev.note}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
           <div className="mt-8 border-t border-line pt-8">
             {issue.photo && (
               <figure className="mb-8">

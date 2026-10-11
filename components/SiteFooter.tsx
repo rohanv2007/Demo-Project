@@ -4,20 +4,6 @@ import Link from "next/link";
 import { PinMark } from "./SiteHeader";
 
 export default function SiteFooter() {
-  function resetDemo() {
-    if (
-      window.confirm(
-        "Reset all demo data? This clears your reports, upvotes, and comments on this device and restores the original sample board.",
-      )
-    ) {
-      Object.keys(window.localStorage)
-        .filter((k) => k.startsWith("fixmycampus."))
-        .forEach((k) => window.localStorage.removeItem(k));
-      window.sessionStorage.removeItem("fixmycampus.steward.v1");
-      window.location.href = "/";
-    }
-  }
-
   return (
     <footer className="mt-24 bg-ink text-paper">
       <div className="mx-auto max-w-6xl px-5 py-14">
@@ -55,13 +41,14 @@ export default function SiteFooter() {
             for the students of Rajalakshmi Engineering College.
           </p>
           <div className="flex items-center gap-5">
-            <button
-              onClick={resetDemo}
-              className="cursor-pointer text-paper/55 underline decoration-paper/30 underline-offset-4 transition-colors hover:text-paper"
-            >
-              Reset demo data
-            </button>
             <p className="font-display italic">See it. Report it. Get it fixed.</p>
+          <p className="text-paper/40">
+            Press{" "}
+            <kbd className="rounded border border-paper/25 px-1.5 py-0.5 font-mono text-[11px] text-paper/70">
+              ?
+            </kbd>{" "}
+            anywhere for keyboard shortcuts
+          </p>
           </div>
         </div>
       </div>

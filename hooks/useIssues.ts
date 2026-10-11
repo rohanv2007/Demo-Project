@@ -10,8 +10,9 @@ import {
 } from "@/lib/issues";
 
 /**
- * Client-side issue store backed by localStorage, seeded with realistic
- * campus reports on first run. Re-reads storage on mount (SSR-safe).
+ * Client-side issue store backed by localStorage. Starts empty — every
+ * report on the board was filed by a real user. Re-reads storage on mount
+ * (SSR-safe).
  */
 export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -26,10 +27,10 @@ export function useIssues() {
     setReady(true);
 
     // Stay in sync when another tab changes the data (e.g. steward console
-    // open alongside the board during a demo).
+    // open alongside the board).
     function onStorage(e: StorageEvent) {
       if (
-        e.key === "fixmycampus.issues.v2" ||
+        e.key === "fixmycampus.issues.v3" ||
         e.key === "fixmycampus.upvoted.v1" ||
         e.key === "fixmycampus.my-issues.v1"
       ) {

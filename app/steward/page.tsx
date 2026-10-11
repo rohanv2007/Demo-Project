@@ -6,13 +6,16 @@ import { useIssues } from "@/hooks/useIssues";
 import {
   STATUSES,
   STATUS_LABEL,
+  CATEGORIES,
   daysOpen,
   timeAgo,
   updateIssueStatus,
+  type Category,
   type Issue,
   type Status,
 } from "@/lib/issues";
 import { cn } from "@/lib/cn";
+import { issuesToCsv, downloadCsv } from "@/lib/csv";
 import Kicker from "@/components/Kicker";
 import StatusPill from "@/components/StatusPill";
 import StewardStats from "@/components/StewardStats";
@@ -20,7 +23,17 @@ import StewardStats from "@/components/StewardStats";
 const DEMO_PASSCODE = "fixit2026";
 const GATE_KEY = "fixmycampus.steward.v1";
 
-function StewardRow({ issue, onUpdated }: { issue: Issue; onUpdated: () => void }) {
+function StewardRow({
+  issue,
+  onUpdated,
+  selected,
+  onToggleSelect,
+}: {
+  issue: Issue;
+  onUpdated: () => void;
+  selected: boolean;
+  onToggleSelect: () => void;
+}) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -34,9 +47,22 @@ function StewardRow({ issue, onUpdated }: { issue: Issue; onUpdated: () => void 
   }
 
   return (
-    <div className="rounded-[4px] border border-line bg-cream p-5">
+    <div
+      className={cn(
+        "rounded-[4px] border bg-cream p-5 transition-colors",
+        selected ? "border-signal" : "border-line",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            aria-label={`Select report: ${issue.title}`}
+            className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer accent-[#c93e1c]"
+          />
+          <div className="min-w-0">
           <Link
             href={`/issues/${issue.id}`}
             className="font-display text-[19px] font-semibold leading-snug tracking-tight hover:text-signal"
@@ -57,6 +83,7 @@ function StewardRow({ issue, onUpdated }: { issue: Issue; onUpdated: () => void 
           <p className="mt-2 line-clamp-2 max-w-2xl text-[14px] leading-relaxed text-soot">
             {issue.description}
           </p>
+          </div>
         </div>
         <StatusPill status={issue.status} />
       </div>
@@ -97,7 +124,54 @@ export default function StewardPage() {
   );
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
+  const [showCode, setShowCode] = useState(false);
   const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [queueCategory, setQueueCategory] = useState<Category | "all">("all");
+  const [staleOnly, setStaleOnly] = useState(false);
+
+  interface SavedView { name: string; query: string; category: Category | "all"; stale: boolean }
+  const VIEWS_KEY = "fixmycampus.steward-views.v1";
+  const [views, setViews] = useState<SavedView[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(VIEWS_KEY) ?? "[]");
+    } catch {
+      return [];
+    }
+  });
+  function saveView() {
+    const name = window.prompt("Name this view:");
+    if (!name?.trim()) return;
+    const next = [...views, { name: name.trim(), query, category: queueCategory, stale: staleOnly }];
+    setViews(next);
+    try {
+      localStorage.setItem(VIEWS_KEY, JSON.stringify(next));
+    } catch {}
+  }
+  function applyView(v: SavedView) {
+    setQuery(v.query);
+    setQueueCategory(v.category);
+    setStaleOnly(v.stale);
+  }
+  function deleteView(name: string) {
+    const next = views.filter((v) => v.name !== name);
+    setViews(next);
+    try {
+      localStorage.setItem(VIEWS_KEY, JSON.stringify(next));
+    } catch {}
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function bulkSet(status: Status) {
+    for (const id of selectedIds) updateIssueStatus(id, status, "Bulk update");
+    setSelectedIds([]);
+    refresh();
+  }
 
   function unlock(e: React.FormEvent) {
     e.preventDefault();
@@ -133,7 +207,7 @@ export default function StewardPage() {
           </label>
           <input
             id="passcode"
-            type="password"
+            type={showCode ? "text" : "password"}
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
@@ -143,6 +217,14 @@ export default function StewardPage() {
             className="w-full rounded-[3px] border border-line bg-paper px-4 py-3 text-[15px] focus:border-ink focus:outline-none"
             autoComplete="off"
           />
+          <button
+            type="button"
+            onClick={() => setShowCode((v) => !v)}
+            className="u-sweep mt-3 cursor-pointer text-[12px] font-semibold uppercase tracking-[0.12em] text-faint"
+            aria-label={showCode ? "Hide passcode" : "Show passcode"}
+          >
+            {showCode ? "Hide" : "Show"}
+          </button>
           {error && (
             <p className="mt-2 text-[13px] font-medium text-ember">
               That passcode didn’t work. Try again.
@@ -172,8 +254,12 @@ export default function StewardPage() {
   const ordered = [...open]
     .filter(
       (i) =>
-        !q ||
-        `${i.title} ${i.location} ${i.category} ${i.reporter}`.toLowerCase().includes(q),
+        (queueCategory === "all" || i.category === queueCategory) &&
+        (!staleOnly || daysOpen(i) >= 7) &&
+        (!q ||
+          `${i.title} ${i.location} ${i.category} ${i.reporter}`
+            .toLowerCase()
+            .includes(q)),
     )
     .sort((a, b) => b.upvotes - a.upvotes);
 
@@ -187,6 +273,17 @@ export default function StewardPage() {
         <p className="pb-2 text-[13px] uppercase tracking-[0.16em] text-faint">
           {ready ? `${open.length} open · ${done.length} fixed` : "Loading…"}
         </p>
+        <button
+          onClick={() =>
+            downloadCsv(
+              `fixmycampus-queue-${new Date().toISOString().slice(0, 10)}.csv`,
+              issuesToCsv(issues),
+            )
+          }
+          className="u-sweep cursor-pointer pb-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-soot"
+        >
+          Export CSV ↓
+        </button>
       </div>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-soot">
         Highest-upvoted first — that’s the campus telling you what hurts most.
@@ -197,36 +294,128 @@ export default function StewardPage() {
       <StewardStats issues={issues} />
 
       <div className="mt-10">
-        <label className="relative block max-w-md">
-          <span className="sr-only">Search the queue</span>
-          <svg
-            viewBox="0 0 20 20"
-            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <label className="relative block max-w-md flex-1">
+            <span className="sr-only">Search the queue</span>
+            <svg
+              viewBox="0 0 20 20"
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="6" />
+              <path d="m13.5 13.5 4 4" strokeLinecap="round" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search the queue…"
+              className="w-full rounded-[3px] border border-line bg-cream py-2.5 pl-11 pr-4 text-[14px] placeholder:text-faint/70 focus:border-ink focus:outline-none"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-[13px] font-medium text-soot">
+            <span className="sr-only">Filter by category</span>
+            <select
+              value={queueCategory}
+              onChange={(e) => setQueueCategory(e.target.value as Category | "all")}
+              className="cursor-pointer rounded-[3px] border border-line bg-cream px-3 py-2.5 text-[14px] focus:border-ink focus:outline-none"
+            >
+              <option value="all">All categories</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={() => setStaleOnly((v) => !v)}
+            aria-pressed={staleOnly}
+            className={cn(
+              "cursor-pointer rounded-[3px] border px-3 py-2.5 text-[13px] font-semibold transition-colors",
+              staleOnly
+                ? "border-ember bg-ember text-cream"
+                : "border-line bg-cream text-soot hover:border-ember",
+            )}
           >
-            <circle cx="9" cy="9" r="6" />
-            <path d="m13.5 13.5 4 4" strokeLinecap="round" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the queue…"
-            className="w-full rounded-[3px] border border-line bg-cream py-2.5 pl-11 pr-4 text-[14px] placeholder:text-faint/70 focus:border-ink focus:outline-none"
-          />
-        </label>
+            Needs attention (7+ days)
+          </button>
+          <button
+            onClick={saveView}
+            className="cursor-pointer rounded-[3px] border border-dashed border-faint/60 px-3 py-2.5 text-[13px] font-semibold text-faint transition-colors hover:border-ink hover:text-ink"
+          >
+            + Save view
+          </button>
+        </div>
+        {views.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-faint">
+              Saved views
+            </span>
+            {views.map((v) => (
+              <span
+                key={v.name}
+                className="inline-flex items-center gap-1 rounded-[3px] border border-line bg-cream pl-3 pr-1.5 py-1.5 text-[13px] font-medium"
+              >
+                <button
+                  onClick={() => applyView(v)}
+                  className="cursor-pointer hover:text-signal"
+                >
+                  {v.name}
+                </button>
+                <button
+                  onClick={() => deleteView(v.name)}
+                  className="cursor-pointer rounded px-1 text-faint hover:text-ember"
+                  aria-label={`Delete view ${v.name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">
+        {selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-[4px] border border-ink bg-ink px-4 py-3 text-cream">
+            <span className="text-[13px] font-semibold uppercase tracking-[0.12em]">
+              {selectedIds.length} selected
+            </span>
+            <span className="text-cream/40">·</span>
+            <span className="text-[12px] text-cream/70">Move all to:</span>
+            {STATUSES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => bulkSet(s.value)}
+                className="cursor-pointer rounded-[3px] border border-cream/30 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors hover:bg-cream hover:text-ink"
+              >
+                {s.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setSelectedIds([])}
+              className="ml-auto cursor-pointer text-[12px] font-semibold text-cream/70 underline-offset-4 hover:text-cream hover:underline"
+            >
+              Clear
+            </button>
+          </div>
+        )}
         {ordered.length === 0 && (
           <p className="rounded-[4px] border border-dashed border-faint/60 bg-cream/60 px-5 py-10 text-center text-[14px] text-soot">
             {q ? "No queue items match that search." : "The queue is clear."}
           </p>
         )}
         {ordered.map((issue) => (
-          <StewardRow key={issue.id} issue={issue} onUpdated={refresh} />
+          <StewardRow
+            key={issue.id}
+            issue={issue}
+            onUpdated={refresh}
+            selected={selectedIds.includes(issue.id)}
+            onToggleSelect={() => toggleSelect(issue.id)}
+          />
         ))}
       </div>
 
@@ -271,6 +460,11 @@ function ActivityFeed({ issues }: { issues: Issue[] }) {
       <p className="mt-1 text-[14px] text-faint">
         Every status change across the board, newest first.
       </p>
+      {events.length === 0 ? (
+        <p className="mt-6 rounded-[4px] border border-dashed border-faint/60 bg-cream/60 px-5 py-8 text-center text-[14px] text-soot">
+          No activity yet — it starts the moment the first report lands.
+        </p>
+      ) : (
       <ol className="mt-6 divide-y divide-line border-y border-line">
         {events.map(({ issue, event }, idx) => (
           <li key={`${issue.id}-${event.at}-${idx}`}>
@@ -298,6 +492,7 @@ function ActivityFeed({ issues }: { issues: Issue[] }) {
           </li>
         ))}
       </ol>
+      )}
     </section>
   );
 }

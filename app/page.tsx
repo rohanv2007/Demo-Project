@@ -10,6 +10,7 @@ import Ticker from "@/components/Ticker";
 import IssueCard from "@/components/IssueCard";
 import StatusPill from "@/components/StatusPill";
 import UpvoteButton from "@/components/UpvoteButton";
+import OnboardingTour from "@/components/OnboardingTour";
 
 const STEPS = [
   {
@@ -45,6 +46,7 @@ export default function Home() {
 
   return (
     <div>
+      <OnboardingTour />
       {/* ---------- Hero ---------- */}
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 md:pb-20 md:pt-20">
         <Kicker>A public fix-list · Rajalakshmi Engineering College</Kicker>
@@ -185,6 +187,23 @@ export default function Home() {
             />
           ))}
         </div>
+        {fresh.length === 0 && (
+          <div className="mt-8 rounded-[4px] border border-dashed border-faint/60 bg-cream/60 px-6 py-12 text-center">
+            <p className="font-display text-[20px] font-semibold tracking-tight">
+              The board is empty — for now.
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-soot">
+              Nothing has been reported yet. Spot something broken on campus?
+              Be the first to put it on the board.
+            </p>
+            <Link
+              href="/report"
+              className="lift mt-6 inline-block rounded-[3px] bg-signal px-6 py-3 text-[13px] font-semibold uppercase tracking-[0.12em] text-cream"
+            >
+              File the first report
+            </Link>
+          </div>
+        )}
         <Link
           href="/issues"
           className="u-sweep mt-8 inline-block text-[13px] font-semibold uppercase tracking-[0.14em] text-soot md:hidden"
@@ -227,6 +246,7 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      <ContributorsStrip issues={issues} />
     </div>
   );
 }
@@ -304,6 +324,50 @@ function WeekSection({ issues }: { issues: import("@/lib/issues").Issue[] }) {
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function ContributorsStrip({ issues }: { issues: import("@/lib/issues").Issue[] }) {
+  const leaders = (() => {
+    const counts = new Map<string, { reports: number; upvotes: number }>();
+    for (const i of issues) {
+      if (i.reporter === "Anonymous") continue;
+      const c = counts.get(i.reporter) ?? { reports: 0, upvotes: 0 };
+      c.reports += 1;
+      c.upvotes += i.upvotes;
+      counts.set(i.reporter, c);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1].reports - a[1].reports || b[1].upvotes - a[1].upvotes)
+      .slice(0, 5);
+  })();
+  if (leaders.length === 0) return null;
+
+  return (
+    <section className="mx-auto max-w-6xl px-5 pb-20 md:pb-28" aria-label="Top contributors">
+      <Kicker>Top contributors</Kicker>
+      <h2 className="mt-4 max-w-2xl font-display text-[28px] font-semibold tracking-tight md:text-[36px]">
+        The students keeping the board honest.
+      </h2>
+      <ol className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {leaders.map(([name, s], idx) => (
+          <li
+            key={name}
+            className="rounded-[4px] border border-line bg-cream p-5"
+          >
+            <p className="font-display text-[13px] font-semibold tabular-nums text-faint">
+              {String(idx + 1).padStart(2, "0")}
+            </p>
+            <p className="mt-2 truncate font-display text-[17px] font-semibold tracking-tight">
+              {name}
+            </p>
+            <p className="mt-1 text-[12px] uppercase tracking-[0.12em] text-faint">
+              {s.reports} report{s.reports === 1 ? "" : "s"} · {s.upvotes} upvotes
+            </p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

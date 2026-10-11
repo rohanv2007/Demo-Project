@@ -35,21 +35,85 @@ const PIN_FILL: Record<Status, string> = {
 
 type Filter = "all" | "open" | "fixed";
 
-/** Readable label size for a building of the given width. */
-function labelSize(b: CampusBuilding): number {
-  if (b.kind === "circle") return 10;
-  const size = Math.min(12.5, (b.w - 10) / (b.name.length * 0.62));
-  return Math.max(7.5, Math.floor(size * 2) / 2);
+/** Width estimate for an uppercase semibold map label, including letter-spacing. */
+function textWidth(text: string, size: number): number {
+  const ls = size > 9 ? 1.5 : 0.5;
+  return text.length * (size * 0.62 + ls);
 }
 
-function labelPos(b: CampusBuilding): { x: number; y: number } {
-  if (b.kind === "rect") {
-    return {
-      x: b.lx ?? b.x + b.w / 2,
-      y: b.ly ?? b.y + b.h / 2,
-    };
+type LabelLayout =
+  | { mode: "inside"; lines: string[]; size: number; x: number; y: number }
+  | { mode: "outside"; x: number; y: number };
+
+/** Best 2-line word split minimizing the longest line's width. */
+function wrapTwoLines(
+  words: string[],
+  size: number,
+  maxW: number,
+): string[] | null {
+  let best: string[] | null = null;
+  let bestW = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const a = words.slice(0, i).join(" ");
+    const b = words.slice(i).join(" ");
+    const w = Math.max(textWidth(a, size), textWidth(b, size));
+    if (w <= maxW && w < bestW) {
+      best = [a, b];
+      bestW = w;
+    }
   }
-  return { x: b.lx ?? b.cx, y: b.ly ?? b.cy };
+  return best;
+}
+
+/**
+ * Where and how a building's name renders. Small boxes get the name
+ * outside with a leader line; everything else fits inside (1 or 2 lines).
+ * Text never overflows its box.
+ */
+function layoutLabel(b: CampusBuilding): LabelLayout {
+  const bounds = buildingBounds(b);
+  const cx = b.lx ?? bounds.x + bounds.w / 2;
+  const cy = b.ly ?? bounds.y + bounds.h / 2;
+  if (b.outside) {
+    return { mode: "outside", x: cx, y: cy };
+  }
+  const innerW = bounds.w - 10;
+  const innerH = bounds.h - 8;
+  const name = b.name;
+  // Single line, shrink to fit.
+  for (let size = 12.5; size >= 8; size -= 0.5) {
+    if (textWidth(name, size) <= innerW && size * 1.2 <= innerH) {
+      return { mode: "inside", lines: [name], size, x: cx, y: cy };
+    }
+  }
+  // Two wrapped lines, shrink to fit.
+  const words = name.split(" ");
+  if (words.length > 1) {
+    for (let size = 11; size >= 8; size -= 0.5) {
+      const lines = wrapTwoLines(words, size, innerW);
+      if (lines && lines.length * size * 1.3 <= innerH) {
+        return { mode: "inside", lines, size, x: cx, y: cy };
+      }
+    }
+  }
+  // Last resort: outside, below the box.
+  return {
+    mode: "outside",
+    x: bounds.x + bounds.w / 2,
+    y: bounds.y + bounds.h + 18,
+  };
+}
+
+/** Nearest point on a building's bounding box to an external label anchor. */
+function leaderFoot(
+  bounds: { x: number; y: number; w: number; h: number },
+  lx: number,
+  ly: number,
+): { x: number; y: number } {
+  return {
+    x: Math.max(bounds.x, Math.min(lx, bounds.x + bounds.w)),
+    y: Math.max(bounds.y, Math.min(ly, bounds.y + bounds.h)),
+  };
 }
 
 export default function CampusMap({
@@ -169,8 +233,7 @@ export default function CampusMap({
             ))}
             {/* Buildings — tap one to file a report there */}
             {CAMPUS_BUILDINGS.map((b) => {
-              const lp = labelPos(b);
-              const size = labelSize(b);
+              const label = layoutLabel(b);
               const open = buildingOpenCount(b);
               const bounds = buildingBounds(b);
               const shape =
@@ -214,19 +277,65 @@ export default function CampusMap({
                 >
                   <title>Report near {b.name}</title>
                   {shape}
-                  <text
-                    x={lp.x}
-                    y={lp.y}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fontSize={size}
-                    letterSpacing={size > 9 ? 1.5 : 0.5}
-                    fill="#8b7f66"
-                    style={{ textTransform: "uppercase", fontWeight: 600 }}
-                    pointerEvents="none"
-                  >
-                    {b.name}
-                  </text>
+                  {label.mode === "inside" ? (
+                    <text
+                      x={label.x}
+                      y={label.y}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={label.size}
+                      letterSpacing={label.size > 9 ? 1.5 : 0.5}
+                      fill="#8b7f66"
+                      style={{ textTransform: "uppercase", fontWeight: 600 }}
+                      pointerEvents="none"
+                    >
+                      {label.lines.map((line, i) => (
+                        <tspan
+                          key={i}
+                          x={label.x}
+                          dy={i === 0 ? -((label.lines.length - 1) * label.size * 1.3) / 2 : label.size * 1.3}
+                        >
+                          {line}
+                        </tspan>
+                      ))}
+                    </text>
+                  ) : (
+                    <g pointerEvents="none">
+                      {(() => {
+                        const foot = leaderFoot(bounds, label.x, label.y);
+                        const dx = label.x - foot.x;
+                        const dy = label.y - foot.y;
+                        const len = Math.hypot(dx, dy) || 1;
+                        const ex = label.x - (dx / len) * 8;
+                        const ey = label.y - (dy / len) * 8;
+                        return (
+                          <>
+                            <line
+                              x1={foot.x}
+                              y1={foot.y}
+                              x2={ex}
+                              y2={ey}
+                              stroke="#8b7f66"
+                              strokeWidth="1"
+                            />
+                            <circle cx={foot.x} cy={foot.y} r="2.5" fill="#8b7f66" />
+                          </>
+                        );
+                      })()}
+                      <text
+                        x={label.x}
+                        y={label.y}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="9.5"
+                        letterSpacing="0.8"
+                        fill="#57534a"
+                        style={{ textTransform: "uppercase", fontWeight: 700 }}
+                      >
+                        {b.name}
+                      </text>
+                    </g>
+                  )}
                   {open > 0 && (
                     <g pointerEvents="none">
                       <circle

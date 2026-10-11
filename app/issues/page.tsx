@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useIssues } from "@/hooks/useIssues";
 import {
   CATEGORIES,
@@ -31,6 +32,20 @@ export default function BoardPage() {
   const [category, setCategory] = useState<Category | "all">("all");
   const [sort, setSort] = useState<Sort>("top");
   const [mineOnly, setMineOnly] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Press "/" anywhere to jump to search.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (e.key === "/" && tag !== "INPUT" && tag !== "TEXTAREA" && tag !== "SELECT") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,9 +85,30 @@ export default function BoardPage() {
         <h1 className="font-display text-[38px] font-semibold tracking-tight md:text-[56px]">
           Every open issue, <em className="text-signal">in one place.</em>
         </h1>
-        <p className="pb-2 text-[13px] uppercase tracking-[0.16em] text-faint">
+        <div className="flex items-center gap-4 pb-2">
+          <Link
+            href="/map"
+            className="u-sweep text-[13px] font-semibold uppercase tracking-[0.14em] text-soot"
+          >
+            Map view →
+          </Link>
+          <p className="flex items-center gap-3 text-[13px] uppercase tracking-[0.16em] text-faint">
           {ready ? `${filtered.length} shown · ${openCount} still open` : "Loading…"}
+          {(query || status !== "all" || category !== "all" || mineOnly) && (
+            <button
+              onClick={() => {
+                setQuery("");
+                setStatus("all");
+                setCategory("all");
+                setMineOnly(false);
+              }}
+              className="cursor-pointer normal-case tracking-normal text-signal hover:text-ember"
+            >
+              Clear filters
+            </button>
+          )}
         </p>
+        </div>
       </div>
 
       {/* Search + sort */}
@@ -91,9 +127,10 @@ export default function BoardPage() {
             <path d="m13.5 13.5 4 4" strokeLinecap="round" />
           </svg>
           <input
+            ref={searchRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search — try “wifi”, “hostel”, “projector”…"
+            placeholder="Search — try “wifi”, “hostel”, “projector”…  ( / )"
             className="w-full rounded-[3px] border border-line bg-cream py-3 pl-11 pr-4 text-[15px] placeholder:text-faint/70 focus:border-ink focus:outline-none"
           />
         </label>

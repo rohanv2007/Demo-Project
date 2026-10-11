@@ -534,7 +534,14 @@ export interface NewIssueInput {
   photo?: string;
 }
 
-export function addIssue(input: NewIssueInput): Issue {
+function persistIssues(issues: Issue[]): void {
+  saveIssues(issues);
+  // Verify the write actually landed (private-mode browsers can silently drop it).
+  const check = window.localStorage.getItem(ISSUES_KEY);
+  if (!check) throw new Error("storage-unavailable");
+}
+
+export function addIssue(input: NewIssueInput): { issue: Issue; photoDropped: boolean } {
   const issues = loadIssues();
   const now = new Date().toISOString();
   const z =
@@ -561,11 +568,20 @@ export function addIssue(input: NewIssueInput): Issue {
     timeline: [{ status: "reported", note: `Report filed by ${input.reporter.trim() || "Anonymous"}.`, at: now }],
   };
   const next = [issue, ...issues];
-  saveIssues(next);
-  const upvoted = [...loadUpvoted(), issue.id];
-  saveUpvoted(upvoted);
+  try {
+    persistIssues(next);
+  } catch {
+    // Photo likely blew the storage quota — retry without it rather than losing the report.
+    const slim: Issue = { ...issue, photo: undefined };
+    persistIssues([slim, ...issues]);
+    const upvoted = [...loadUpvoted(), slim.id];
+    saveUpvoted(upvoted);
+    saveMyIssueIds([...loadMyIssueIds(), slim.id]);
+    return { issue: slim, photoDropped: true };
+  }
+  saveUpvoted([...loadUpvoted(), issue.id]);
   saveMyIssueIds([...loadMyIssueIds(), issue.id]);
-  return issue;
+  return { issue, photoDropped: false };
 }
 
 export function updateIssueStatus(id: string, status: Status, note: string): Issue[] {

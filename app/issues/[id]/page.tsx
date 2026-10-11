@@ -45,6 +45,7 @@ function DetailInner() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const [showFresh, setShowFresh] = useState(searchParams.get("fresh") === "1");
+  const noPhoto = searchParams.get("nophoto") === "1";
   const { issues, upvotedIds, myIssueIds, ready, toggleUpvote, refresh } = useIssues();
   const issue = issues.find((i) => i.id === params.id);
   const openDays = issue ? daysOpen(issue) : 0;
@@ -102,6 +103,12 @@ function DetailInner() {
             <p className="mt-1 text-[14px] text-soot">
               It is on the board and on the map. Share the link to rally upvotes —
               the louder it gets, the faster it moves.
+              {noPhoto && (
+                <span className="mt-1 block text-ember">
+                  Note: the photo could not be kept — this browser’s storage is
+                  full. The report itself is safe.
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -224,7 +231,7 @@ function DetailInner() {
                 active={upvotedIds.includes(issue.id)}
                 onToggle={() => toggleUpvote(issue.id)}
               />
-              <ShareButton path={`/issues/${issue.id}`} />
+              <ShareButton path={`/issues/${issue.id}`} title={issue.title} />
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-soot">
               Upvotes push an issue up the board — the loudest problems get

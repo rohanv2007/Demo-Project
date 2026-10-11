@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { STATUS_LABEL, type Issue, type Status } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 import StatusPill from "./StatusPill";
@@ -51,6 +52,7 @@ export default function CampusMap({
 }) {
   const [filter, setFilter] = useState<Filter>("open");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const router = useRouter();
 
   const visible = useMemo(
     () =>
@@ -125,9 +127,25 @@ export default function CampusMap({
                 aria-hidden="true"
               />
             ))}
-            {/* Zone blocks */}
+            {/* Zone blocks — tap one to file a report there */}
             {ZONE_RECTS.map((z) => (
-              <g key={z.name}>
+              <g
+                key={z.name}
+                onClick={() =>
+                  router.push(`/report?zone=${encodeURIComponent(z.name)}`)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/report?zone=${encodeURIComponent(z.name)}`);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`File a report near ${z.name}`}
+                className="cursor-pointer"
+              >
+                <title>Report near {z.name}</title>
                 <rect
                   x={z.x}
                   y={z.y}
@@ -138,6 +156,7 @@ export default function CampusMap({
                   stroke="#1d1710"
                   strokeWidth="1.5"
                   opacity="0.9"
+                  className="transition-colors hover:fill-sand"
                 />
                 <text
                   x={z.x + z.w / 2}
@@ -148,6 +167,7 @@ export default function CampusMap({
                   letterSpacing="2"
                   fill="#8b7f66"
                   style={{ textTransform: "uppercase", fontWeight: 600 }}
+                  pointerEvents="none"
                 >
                   {z.name}
                 </text>

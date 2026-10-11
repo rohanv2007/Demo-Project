@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import CommandPalette, { useCommandPalette } from "./CommandPalette";
 
 export function PinMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
@@ -64,6 +65,7 @@ function MobileNav() {
 }
 
 export default function SiteHeader() {
+  const { open, setOpen } = useCommandPalette();
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5">
@@ -76,16 +78,40 @@ export default function SiteHeader() {
         <Suspense>
           <DesktopNav />
         </Suspense>
-        <Link
-          href="/report"
-          className="lift shrink-0 whitespace-nowrap rounded-[3px] bg-ink px-3.5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-cream md:px-4 md:py-2.5 md:text-[13px]"
-        >
-          Report an issue
-        </Link>
+        <div className="flex shrink-0 items-center gap-2.5">
+          <button
+            onClick={() => setOpen(true)}
+            className="hidden cursor-pointer items-center gap-2 rounded-[3px] border border-line bg-cream px-3 py-2 text-[12px] text-faint transition-colors hover:border-ink hover:text-ink md:inline-flex"
+            aria-label="Quick navigation (Control K)"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <circle cx="9" cy="9" r="6" />
+              <path d="m13.5 13.5 4 4" strokeLinecap="round" />
+            </svg>
+            <span className="hidden lg:inline">Jump to…</span>
+            <kbd className="rounded border border-line px-1 text-[10px] font-semibold">
+              ⌘K
+            </kbd>
+          </button>
+          <Link
+            href="/report"
+            className="lift shrink-0 whitespace-nowrap rounded-[3px] bg-ink px-3.5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-cream md:px-4 md:py-2.5 md:text-[13px]"
+          >
+            Report an issue
+          </Link>
+        </div>
       </div>
       <Suspense>
         <MobileNav />
       </Suspense>
+      <CommandPalette open={open} onClose={() => setOpen(false)} />
     </header>
   );
 }

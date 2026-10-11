@@ -20,7 +20,8 @@ export default function MapPage() {
       </div>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-soot">
         Every report, pinned where it happened. Spotted something near you?
-        Check whether it is already on the board before filing.
+        Tap a building to file a report there — or check whether it is already
+        on the board first.
       </p>
 
       <div className="mt-8">

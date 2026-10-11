@@ -24,7 +24,7 @@ export default function UpvoteButton({
       aria-pressed={active}
       aria-label={active ? "Remove your upvote" : "Upvote this issue"}
       className={cn(
-        "group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[3px] border font-semibold transition-all duration-200",
+        "group inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[3px] border font-semibold transition-all duration-200 active:scale-95",
         size === "lg" ? "px-4 py-2.5 text-sm" : "px-3 py-1.5 text-[13px]",
         active
           ? "border-signal bg-signal text-cream"

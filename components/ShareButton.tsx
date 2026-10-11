@@ -3,11 +3,21 @@
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 
-export default function ShareButton({ path }: { path: string }) {
+export default function ShareButton({ path, title }: { path: string; title?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function share() {
     const url = `${window.location.origin}${path}`;
+    // Native share sheet on mobile — falls back to clipboard copy.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title ?? "FixMyCampus", url });
+        return;
+      } catch {
+        /* user dismissed — stay quiet */
+        return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(url);
     } catch {

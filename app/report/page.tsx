@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, type Category, type Issue, type Urgency } from "@/lib/issues";
@@ -15,6 +15,29 @@ const URGENCIES: { value: Urgency; label: string; hint: string }[] = [
 
 const inputCls =
   "w-full rounded-[3px] border border-line bg-cream px-4 py-3 text-[15px] placeholder:text-faint/70 focus:border-ink focus:outline-none transition-colors";
+
+const DRAFT_KEY = "fixmycampus.report-draft.v1";
+
+interface Draft {
+  title: string;
+  category: Category;
+  location: string;
+  zone: string;
+  description: string;
+  urgency: Urgency;
+  name: string;
+  anonymous: boolean;
+}
+
+function loadDraft(): Partial<Draft> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Partial<Draft>) : {};
+  } catch {
+    return {};
+  }
+}
 
 /** Downscales an image file to a bounded JPEG data URL for localStorage. */
 function fileToPhoto(file: File): Promise<string> {
@@ -46,17 +69,75 @@ function fileToPhoto(file: File): Promise<string> {
 
 export default function ReportPage() {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Category>("Electrical");
-  const [location, setLocation] = useState("");
-  const [zone, setZone] = useState("");
-  const [description, setDescription] = useState("");
-  const [urgency, setUrgency] = useState<Urgency>("medium");
-  const [name, setName] = useState("");
-  const [anonymous, setAnonymous] = useState(false);
+  const [draft] = useState<Partial<Draft>>(loadDraft);
+  const [title, setTitle] = useState(draft.title ?? "");
+  const [category, setCategory] = useState<Category>(
+    draft.category ?? "Electrical",
+  );
+  const [location, setLocation] = useState(draft.location ?? "");
+  const [zone, setZone] = useState(draft.zone ?? "");
+  const [description, setDescription] = useState(draft.description ?? "");
+  const [urgency, setUrgency] = useState<Urgency>(draft.urgency ?? "medium");
+  const [name, setName] = useState(draft.name ?? "");
+  const [anonymous, setAnonymous] = useState(draft.anonymous ?? false);
   const [errors, setErrors] = useState<string[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
+  const [restored, setRestored] = useState(
+    Boolean(draft.title || draft.description),
+  );
+
+  // Autosave the draft so an interrupted report is never lost.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const d: Draft = {
+        title,
+        category,
+        location,
+        zone,
+        description,
+        urgency,
+        name,
+        anonymous,
+      };
+      try {
+        if (title || description || location) {
+          window.localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+        } else {
+          window.localStorage.removeItem(DRAFT_KEY);
+        }
+      } catch {
+        /* storage full — draft stays in memory */
+      }
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [title, category, location, zone, description, urgency, name, anonymous]);
+
+  // Prefill the zone when arriving from the map ("tap a building to report").
+  useEffect(() => {
+    const z = new URLSearchParams(window.location.search).get("zone");
+    if (z && CAMPUS_ZONES.some((zone) => zone.name === z)) {
+      setZone(z);
+      setRestored(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function discardDraft() {
+    setTitle("");
+    setLocation("");
+    setZone("");
+    setDescription("");
+    setName("");
+    setAnonymous(false);
+    setPhoto(null);
+    setRestored(false);
+    try {
+      window.localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* noop */
+    }
+  }
 
   const similar: Issue[] =
     title.trim().length >= 4 ? findSimilarIssues(title, loadIssues(), 2) : [];
@@ -73,7 +154,7 @@ export default function ReportPage() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    const issue = addIssue({
+    const { issue, photoDropped } = addIssue({
       title,
       category,
       location,
@@ -83,7 +164,12 @@ export default function ReportPage() {
       zone,
       photo: photo ?? undefined,
     });
-    router.push(`/issues/${issue.id}?fresh=1`);
+    try {
+      window.localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* noop */
+    }
+    router.push(`/issues/${issue.id}?fresh=1${photoDropped ? "&nophoto=1" : ""}`);
   }
 
   return (
@@ -107,6 +193,21 @@ export default function ReportPage() {
               <li key={e}>{e}</li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {restored && (
+        <div className="mt-8 flex items-center justify-between gap-4 rounded-[3px] border border-line bg-cream px-5 py-3.5">
+          <p className="text-[14px] text-soot">
+            Picked up where you left off — your unfinished draft was restored.
+          </p>
+          <button
+            type="button"
+            onClick={discardDraft}
+            className="cursor-pointer shrink-0 text-[12px] font-semibold uppercase tracking-[0.12em] text-faint hover:text-ember"
+          >
+            Discard
+          </button>
         </div>
       )}
 

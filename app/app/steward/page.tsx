@@ -130,6 +130,37 @@ export default function StewardPage() {
   const [queueCategory, setQueueCategory] = useState<Category | "all">("all");
   const [staleOnly, setStaleOnly] = useState(false);
 
+  interface SavedView { name: string; query: string; category: Category | "all"; stale: boolean }
+  const VIEWS_KEY = "fixmycampus.steward-views.v1";
+  const [views, setViews] = useState<SavedView[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(VIEWS_KEY) ?? "[]");
+    } catch {
+      return [];
+    }
+  });
+  function saveView() {
+    const name = window.prompt("Name this view:");
+    if (!name?.trim()) return;
+    const next = [...views, { name: name.trim(), query, category: queueCategory, stale: staleOnly }];
+    setViews(next);
+    try {
+      localStorage.setItem(VIEWS_KEY, JSON.stringify(next));
+    } catch {}
+  }
+  function applyView(v: SavedView) {
+    setQuery(v.query);
+    setQueueCategory(v.category);
+    setStaleOnly(v.stale);
+  }
+  function deleteView(name: string) {
+    const next = views.filter((v) => v.name !== name);
+    setViews(next);
+    try {
+      localStorage.setItem(VIEWS_KEY, JSON.stringify(next));
+    } catch {}
+  }
+
   function toggleSelect(id: string) {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
@@ -311,7 +342,40 @@ export default function StewardPage() {
           >
             Needs attention (7+ days)
           </button>
+          <button
+            onClick={saveView}
+            className="cursor-pointer rounded-[3px] border border-dashed border-faint/60 px-3 py-2.5 text-[13px] font-semibold text-faint transition-colors hover:border-ink hover:text-ink"
+          >
+            + Save view
+          </button>
         </div>
+        {views.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-faint">
+              Saved views
+            </span>
+            {views.map((v) => (
+              <span
+                key={v.name}
+                className="inline-flex items-center gap-1 rounded-[3px] border border-line bg-cream pl-3 pr-1.5 py-1.5 text-[13px] font-medium"
+              >
+                <button
+                  onClick={() => applyView(v)}
+                  className="cursor-pointer hover:text-signal"
+                >
+                  {v.name}
+                </button>
+                <button
+                  onClick={() => deleteView(v.name)}
+                  className="cursor-pointer rounded px-1 text-faint hover:text-ember"
+                  aria-label={`Delete view ${v.name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">

@@ -19,11 +19,12 @@ import IssueCard from "@/components/IssueCard";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 
-type Sort = "top" | "new" | "oldest" | "recent-fixed";
+type Sort = "top" | "new" | "oldest" | "recent-fixed" | "discussed";
 
 const SORT_LABELS: { value: Sort; label: string }[] = [
   { value: "top", label: "Most upvoted" },
   { value: "new", label: "Newest" },
+  { value: "discussed", label: "Most discussed" },
   { value: "oldest", label: "Oldest open" },
   { value: "recent-fixed", label: "Recently fixed" },
 ];
@@ -81,6 +82,11 @@ export default function BoardPage() {
         return b.upvotes - a.upvotes || +new Date(b.createdAt) - +new Date(a.createdAt);
       if (sort === "new") return +new Date(b.createdAt) - +new Date(a.createdAt);
       if (sort === "oldest") return daysOpen(b) - daysOpen(a);
+      if (sort === "discussed")
+        return (
+          b.comments.length - a.comments.length ||
+          b.upvotes - a.upvotes
+        );
       const aFixed = [...a.timeline].reverse().find((t) => t.status === "fixed");
       const bFixed = [...b.timeline].reverse().find((t) => t.status === "fixed");
       return (
@@ -322,6 +328,7 @@ export default function BoardPage() {
                 upvoted={upvotedIds.includes(issue.id)}
                 onToggleUpvote={toggleUpvote}
                 mine={myIssueIds.includes(issue.id)}
+                highlight={query}
               />
             ))}
           </div>

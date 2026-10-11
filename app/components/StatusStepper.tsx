@@ -11,7 +11,7 @@ export default function StatusStepper({ status }: { status: Status }) {
 
   return (
     <ol
-      className="mt-6 flex items-center"
+      className="thin-scroll mt-6 flex items-start overflow-x-auto pb-1"
       aria-label={`Progress: ${STATUS_LABEL[status]}`}
     >
       {STATUSES.map((s, i) => {
@@ -49,7 +49,7 @@ export default function StatusStepper({ status }: { status: Status }) {
             {i < STATUSES.length - 1 && (
               <span
                 className={cn(
-                  "mx-1 mb-7 h-0.5 flex-1 rounded sm:mx-2",
+                  "mx-1 mb-7 h-0.5 min-w-6 flex-1 rounded sm:mx-2",
                   i < currentIdx ? "bg-moss" : "bg-line",
                 )}
                 aria-hidden="true"

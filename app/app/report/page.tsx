@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, type Category, type Issue, type Urgency } from "@/lib/issues";
+import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, reportStrength, zoneForLocation, type Category, type Issue, type Urgency } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
 import StatusPill from "@/components/StatusPill";
@@ -481,9 +481,16 @@ export default function ReportPage() {
         </div>
 
         <div className="border-t border-line pt-8">
+          <DraftStrength
+            title={title}
+            description={description}
+            photo={photo}
+            category={category}
+            zone={zone}
+          />
           <button
             type="submit"
-            className="lift w-full cursor-pointer rounded-[3px] bg-signal px-6 py-4 text-[14px] font-semibold uppercase tracking-[0.12em] text-cream md:w-auto md:px-10"
+            className="lift mt-6 w-full cursor-pointer rounded-[3px] bg-signal px-6 py-4 text-[14px] font-semibold uppercase tracking-[0.12em] text-cream md:w-auto md:px-10"
           >
             Publish to the board
           </button>
@@ -492,6 +499,74 @@ export default function ReportPage() {
           </p>
         </div>
       </form>
+    </div>
+  );
+}
+
+function DraftStrength({
+  title,
+  description,
+  photo,
+  category,
+  zone,
+}: {
+  title: string;
+  description: string;
+  photo: string | null;
+  category: import("@/lib/issues").Category;
+  zone: string;
+}) {
+  // Compute on mount only: reportStrength uses Date.now(), which breaks
+  // static prerendering if evaluated during SSR.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  const zonePoint = zoneForLocation(zone);
+  const b = reportStrength(
+    {
+      id: "draft",
+      title,
+      description,
+      category,
+      location: zone,
+      reporter: "you",
+      // Fixed reference date: drafts are "now" by definition, and using
+      // new Date() in render breaks static prerendering.
+      createdAt: "2026-10-11T12:00:00+05:30",
+      status: "reported" as const,
+      urgency: "medium" as const,
+      upvotes: 0,
+      photo: photo ?? undefined,
+      map: zonePoint,
+      timeline: [],
+      comments: [],
+    },
+    loadIssues(),
+  );
+  return (
+    <div className="mb-2 rounded-[4px] border border-line bg-cream p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-faint">
+          Your report&apos;s strength
+        </p>
+        <p className="font-display text-[24px] font-semibold tabular-nums">
+          {b.score}
+          <span className="text-[13px] font-normal text-faint">/100</span>
+        </p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
+        <div
+          className="h-full rounded-full bg-signal transition-[width] duration-500"
+          style={{ width: `${b.score}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-soot">
+        {b.score >= 70
+          ? "Strong report — stewards can act on this immediately."
+          : b.photo === 0
+            ? "Add a photo to jump +20 — pictures get fixed fastest."
+            : "Add more detail about how long and who it affects to raise the score."}
+      </p>
     </div>
   );
 }

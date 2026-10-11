@@ -10,11 +10,13 @@ export default function IssueCard({
   upvoted,
   onToggleUpvote,
   mine = false,
+  highlight = "",
 }: {
   issue: Issue;
   upvoted: boolean;
   onToggleUpvote: (id: string) => void;
   mine?: boolean;
+  highlight?: string;
 }) {
   return (
     <Link
@@ -35,10 +37,10 @@ export default function IssueCard({
         </div>
       </div>
       <h3 className="mt-3 font-display text-[21px] font-semibold leading-snug tracking-tight">
-        {issue.title}
+        <Highlight text={issue.title} query={highlight} />
       </h3>
       <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-soot">
-        {issue.description}
+        <Highlight text={issue.description} query={highlight} />
       </p>
       <div className="mt-4 flex items-center justify-between border-t border-line/70 pt-4">
         <UpvoteButton
@@ -48,6 +50,9 @@ export default function IssueCard({
         />
         <span className="text-[12px] text-faint">
           {issue.reporter} · {timeAgo(issue.createdAt)}
+          {issue.comments.length > 0 && (
+            <span> · {issue.comments.length} comment{issue.comments.length === 1 ? "" : "s"}</span>
+          )}
           {issue.status !== "fixed" && (
             <span className={daysOpen(issue) >= 7 ? "font-semibold text-ember" : undefined}>
               {" "}· {daysOpen(issue)}d open
@@ -56,5 +61,22 @@ export default function IssueCard({
         </span>
       </div>
     </Link>
+  );
+}
+
+/** Wraps query matches in a <mark> for search-result highlighting. */
+function Highlight({ text, query }: { text: string; query: string }) {
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="rounded-[2px] bg-gold/25 px-0.5 text-inherit">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
   );
 }

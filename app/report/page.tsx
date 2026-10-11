@@ -84,6 +84,18 @@ export default function ReportPage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handlePhotoFile(file: File | undefined) {
+    if (!file) return;
+    try {
+      const dataUrl = await fileToPhoto(file);
+      setPhoto(dataUrl);
+      setPhotoError("");
+    } catch {
+      setPhotoError("That image could not be read — try another file.");
+    }
+  }
   const [restored, setRestored] = useState(
     Boolean(draft.title || draft.description),
   );
@@ -344,7 +356,24 @@ export default function ReportPage() {
               </button>
             </div>
           ) : (
-            <label className="flex cursor-pointer items-center justify-center gap-3 rounded-[3px] border border-dashed border-faint/60 bg-cream px-4 py-8 text-center transition-colors hover:border-ink">
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                void handlePhotoFile(e.dataTransfer.files?.[0]);
+              }}
+              className={cn(
+                "flex cursor-pointer items-center justify-center gap-3 rounded-[3px] border border-dashed bg-cream px-4 py-8 text-center transition-colors",
+                dragOver
+                  ? "border-signal bg-signal/5"
+                  : "border-faint/60 hover:border-ink",
+              )}
+            >
               <svg
                 viewBox="0 0 20 20"
                 className="h-5 w-5 text-faint"
@@ -358,23 +387,22 @@ export default function ReportPage() {
                 <path d="M7 4.5 8.2 3h3.6L13 4.5" strokeLinecap="round" />
               </svg>
               <span className="text-[14px] text-soot">
-                Attach a photo <span className="text-faint">— JPG or PNG, stored on your device</span>
+                {dragOver ? (
+                  "Drop the photo to attach it"
+                ) : (
+                  <>
+                    Attach a photo <span className="text-faint">— JPG or PNG, drag & drop or click, stored on your device</span>
+                  </>
+                )}
               </span>
               <input
                 type="file"
                 accept="image/*"
                 className="sr-only"
-                onChange={async (e) => {
+                onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
-                  if (!file) return;
-                  try {
-                    const dataUrl = await fileToPhoto(file);
-                    setPhoto(dataUrl);
-                    setPhotoError("");
-                  } catch {
-                    setPhotoError("That image could not be read — try another file.");
-                  }
+                  void handlePhotoFile(file);
                 }}
               />
             </label>

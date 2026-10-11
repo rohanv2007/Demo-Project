@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, type Category, type Issue, type Urgency } from "@/lib/issues";
+import { CATEGORIES, CAMPUS_ZONES, addIssue, findSimilarIssues, loadIssues, reportStrength, zoneForLocation, type Category, type Issue, type Urgency } from "@/lib/issues";
 import { cn } from "@/lib/cn";
 import Kicker from "@/components/Kicker";
 import StatusPill from "@/components/StatusPill";
@@ -233,10 +233,18 @@ export default function ReportPage() {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Tube lights flickering in CSE Block, Room 204"
+            placeholder="e.g. Tube lights flickering in Main Block, Room 204"
             className={inputCls}
             maxLength={90}
           />
+          <div className="mt-1.5 flex items-center justify-between text-[12px]">
+            <span className={cn(title.trim().length >= 12 ? "text-moss" : "text-faint")}>
+              {title.trim().length >= 12
+                ? "Clear and specific — good."
+                : "Tip: name the place and the problem."}
+            </span>
+            <span className="tabular-nums text-faint">{title.length}/90</span>
+          </div>
           {similar.length > 0 && (
             <div className="mt-3 rounded-[3px] border border-gold/50 bg-cream px-4 py-3">
               <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-soot">
@@ -294,7 +302,7 @@ export default function ReportPage() {
             id="location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Central Library, 2nd floor reading hall"
+            placeholder="e.g. J Block and Library, 2nd floor reading hall"
             className={inputCls}
             maxLength={80}
           />
@@ -332,7 +340,14 @@ export default function ReportPage() {
             className={cn(inputCls, "resize-y leading-relaxed")}
             maxLength={1200}
           />
-          <p className="mt-1.5 text-right text-[12px] text-faint">{description.length}/1200</p>
+          <div className="mt-1.5 flex items-center justify-between text-[12px]">
+            <span className={cn(description.trim().length >= 40 ? "text-moss" : "text-faint")}>
+              {description.trim().length >= 40
+                ? "Detailed enough for a steward to act on."
+                : "Tip: add how long and who it affects."}
+            </span>
+            <span className="tabular-nums text-faint">{description.length}/1200</span>
+          </div>
         </div>
 
         <div>
@@ -466,9 +481,16 @@ export default function ReportPage() {
         </div>
 
         <div className="border-t border-line pt-8">
+          <DraftStrength
+            title={title}
+            description={description}
+            photo={photo}
+            category={category}
+            zone={zone}
+          />
           <button
             type="submit"
-            className="lift w-full cursor-pointer rounded-[3px] bg-signal px-6 py-4 text-[14px] font-semibold uppercase tracking-[0.12em] text-cream md:w-auto md:px-10"
+            className="lift mt-6 w-full cursor-pointer rounded-[3px] bg-signal px-6 py-4 text-[14px] font-semibold uppercase tracking-[0.12em] text-cream md:w-auto md:px-10"
           >
             Publish to the board
           </button>
@@ -477,6 +499,74 @@ export default function ReportPage() {
           </p>
         </div>
       </form>
+    </div>
+  );
+}
+
+function DraftStrength({
+  title,
+  description,
+  photo,
+  category,
+  zone,
+}: {
+  title: string;
+  description: string;
+  photo: string | null;
+  category: import("@/lib/issues").Category;
+  zone: string;
+}) {
+  // Compute on mount only: reportStrength uses Date.now(), which breaks
+  // static prerendering if evaluated during SSR.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  const zonePoint = zoneForLocation(zone);
+  const b = reportStrength(
+    {
+      id: "draft",
+      title,
+      description,
+      category,
+      location: zone,
+      reporter: "you",
+      // Fixed reference date: drafts are "now" by definition, and using
+      // new Date() in render breaks static prerendering.
+      createdAt: "2026-10-11T12:00:00+05:30",
+      status: "reported" as const,
+      urgency: "medium" as const,
+      upvotes: 0,
+      photo: photo ?? undefined,
+      map: zonePoint,
+      timeline: [],
+      comments: [],
+    },
+    loadIssues(),
+  );
+  return (
+    <div className="mb-2 rounded-[4px] border border-line bg-cream p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-faint">
+          Your report&apos;s strength
+        </p>
+        <p className="font-display text-[24px] font-semibold tabular-nums">
+          {b.score}
+          <span className="text-[13px] font-normal text-faint">/100</span>
+        </p>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
+        <div
+          className="h-full rounded-full bg-signal transition-[width] duration-500"
+          style={{ width: `${b.score}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-soot">
+        {b.score >= 70
+          ? "Strong report — stewards can act on this immediately."
+          : b.photo === 0
+            ? "Add a photo to jump +20 — pictures get fixed fastest."
+            : "Add more detail about how long and who it affects to raise the score."}
+      </p>
     </div>
   );
 }

@@ -4,33 +4,27 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STATUS_LABEL, type Issue, type Status } from "@/lib/issues";
+import {
+  CAMPUS_BUILDINGS,
+  CAMPUS_RING,
+  CAMPUS_ROADS,
+  CAMPUS_VIEWBOX,
+  buildingBounds,
+  type CampusBuilding,
+} from "@/lib/campus-map";
 import { cn } from "@/lib/cn";
 import StatusPill from "./StatusPill";
 import UpvoteButton from "./UpvoteButton";
 
-/* Schematic campus plan — architectural drawing style, ink on paper. */
-const ZONE_RECTS: { name: string; x: number; y: number; w: number; h: number }[] = [
-  { name: "Central Library", x: 430, y: 280, w: 140, h: 120 },
-  { name: "CSE Block", x: 170, y: 240, w: 160, h: 120 },
-  { name: "EEE Block", x: 170, y: 430, w: 160, h: 100 },
-  { name: "ME Block", x: 60, y: 510, w: 160, h: 100 },
-  { name: "ECE Block", x: 330, y: 130, w: 140, h: 120 },
-  { name: "Admin Block", x: 640, y: 400, w: 140, h: 100 },
-  { name: "Boys Hostel", x: 790, y: 180, w: 140, h: 120 },
-  { name: "Food Court", x: 560, y: 480, w: 120, h: 90 },
-  { name: "Canteen", x: 640, y: 560, w: 130, h: 80 },
-  { name: "Bus Bay", x: 800, y: 560, w: 120, h: 90 },
-  { name: "Open-air Theatre", x: 380, y: 520, w: 140, h: 90 },
-  { name: "Sports Ground", x: 560, y: 60, w: 130, h: 110 },
-];
+/* The real REC campus — Rohan's own layout, ink on paper. */
 
-const WALKWAYS = [
-  "M860,600 L740,500 L640,450 L560,420 L480,380",
-  "M480,380 L360,330 L290,320",
-  "M480,380 L430,260 L410,250",
-  "M560,480 L640,540 L690,570",
-  "M710,500 L800,540 L850,570",
-];
+const TONE_FILL: Record<string, string> = {
+  building: "#fbf7ec",
+  green: "#e4e9d4",
+  water: "#d8e5ed",
+};
+
+const ROAD_STROKE = "#c4b795";
 
 const PIN_FILL: Record<Status, string> = {
   reported: "#1d1710",
@@ -40,6 +34,23 @@ const PIN_FILL: Record<Status, string> = {
 };
 
 type Filter = "all" | "open" | "fixed";
+
+/** Readable label size for a building of the given width. */
+function labelSize(b: CampusBuilding): number {
+  if (b.kind === "circle") return 10;
+  const size = Math.min(12.5, (b.w - 10) / (b.name.length * 0.62));
+  return Math.max(7.5, Math.floor(size * 2) / 2);
+}
+
+function labelPos(b: CampusBuilding): { x: number; y: number } {
+  if (b.kind === "rect") {
+    return {
+      x: b.lx ?? b.x + b.w / 2,
+      y: b.ly ?? b.y + b.h / 2,
+    };
+  }
+  return { x: b.lx ?? b.cx, y: b.ly ?? b.cy };
+}
 
 export default function CampusMap({
   issues,
@@ -65,6 +76,23 @@ export default function CampusMap({
   );
 
   const selected = issues.find((i) => i.id === selectedId) ?? null;
+
+  /** Open (non-fixed) issues whose pin falls inside a building's footprint. */
+  function buildingOpenCount(b: CampusBuilding): number {
+    const z = buildingBounds(b);
+    return issues.filter(
+      (i) =>
+        i.status !== "fixed" &&
+        i.map.x >= z.x - 24 &&
+        i.map.x <= z.x + z.w + 24 &&
+        i.map.y >= z.y - 24 &&
+        i.map.y <= z.y + z.h + 24,
+    ).length;
+  }
+
+  function openReport(b: CampusBuilding) {
+    router.push(`/report?zone=${encodeURIComponent(b.name)}`);
+  }
 
   return (
     <div>
@@ -109,70 +137,120 @@ export default function CampusMap({
         {/* Map */}
         <div className="overflow-hidden rounded-[4px] border border-line bg-cream">
           <svg
-            viewBox="0 0 1000 700"
+            viewBox={CAMPUS_VIEWBOX}
             className="block h-auto w-full"
             role="img"
-            aria-label="Schematic campus map with issue pins"
+            aria-label="REC campus map with issue pins"
           >
-            {/* Walkways */}
-            {WALKWAYS.map((d, i) => (
-              <path
+            {/* Ring road */}
+            <rect
+              x={CAMPUS_RING.x}
+              y={CAMPUS_RING.y}
+              width={CAMPUS_RING.w}
+              height={CAMPUS_RING.h}
+              rx={CAMPUS_RING.rx}
+              fill="none"
+              stroke={ROAD_STROKE}
+              strokeWidth={CAMPUS_RING.width}
+              aria-hidden="true"
+            />
+            {/* Roads */}
+            {CAMPUS_ROADS.map((r, i) => (
+              <polyline
                 key={i}
-                d={d}
+                points={r.points.map((p) => p.join(",")).join(" ")}
                 fill="none"
-                stroke="#dcd0b4"
-                strokeWidth="10"
+                stroke={ROAD_STROKE}
+                strokeWidth={r.width}
                 strokeLinecap="round"
-                strokeDasharray="2 14"
+                strokeLinejoin="round"
                 aria-hidden="true"
               />
             ))}
-            {/* Zone blocks — tap one to file a report there */}
-            {ZONE_RECTS.map((z) => (
-              <g
-                key={z.name}
-                onClick={() =>
-                  router.push(`/report?zone=${encodeURIComponent(z.name)}`)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/report?zone=${encodeURIComponent(z.name)}`);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`File a report near ${z.name}`}
-                className="cursor-pointer"
-              >
-                <title>Report near {z.name}</title>
-                <rect
-                  x={z.x}
-                  y={z.y}
-                  width={z.w}
-                  height={z.h}
-                  rx="3"
-                  fill="#f6f1e5"
-                  stroke="#1d1710"
-                  strokeWidth="1.5"
-                  opacity="0.9"
-                  className="transition-colors hover:fill-sand"
-                />
-                <text
-                  x={z.x + z.w / 2}
-                  y={z.y + z.h / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize="15"
-                  letterSpacing="2"
-                  fill="#8b7f66"
-                  style={{ textTransform: "uppercase", fontWeight: 600 }}
-                  pointerEvents="none"
+            {/* Buildings — tap one to file a report there */}
+            {CAMPUS_BUILDINGS.map((b) => {
+              const lp = labelPos(b);
+              const size = labelSize(b);
+              const open = buildingOpenCount(b);
+              const bounds = buildingBounds(b);
+              const shape =
+                b.kind === "rect" ? (
+                  <rect
+                    x={b.x}
+                    y={b.y}
+                    width={b.w}
+                    height={b.h}
+                    rx="3"
+                    fill={TONE_FILL[b.tone ?? "building"]}
+                    stroke="#1d1710"
+                    strokeWidth="1.5"
+                    className="transition-colors hover:fill-sand"
+                  />
+                ) : (
+                  <circle
+                    cx={b.cx}
+                    cy={b.cy}
+                    r={b.r}
+                    fill={TONE_FILL[b.tone ?? "building"]}
+                    stroke="#1d1710"
+                    strokeWidth="1.5"
+                    className="transition-colors hover:fill-sand"
+                  />
+                );
+              return (
+                <g
+                  key={b.id}
+                  onClick={() => openReport(b)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openReport(b);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`File a report near ${b.name}`}
+                  className="cursor-pointer"
                 >
-                  {z.name}
-                </text>
-              </g>
-            ))}
+                  <title>Report near {b.name}</title>
+                  {shape}
+                  <text
+                    x={lp.x}
+                    y={lp.y}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={size}
+                    letterSpacing={size > 9 ? 1.5 : 0.5}
+                    fill="#8b7f66"
+                    style={{ textTransform: "uppercase", fontWeight: 600 }}
+                    pointerEvents="none"
+                  >
+                    {b.name}
+                  </text>
+                  {open > 0 && (
+                    <g pointerEvents="none">
+                      <circle
+                        cx={bounds.x + bounds.w - 12}
+                        cy={bounds.y + 12}
+                        r="11"
+                        fill="#c93e1c"
+                      />
+                      <text
+                        x={bounds.x + bounds.w - 12}
+                        y={bounds.y + 12}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize="12"
+                        fontWeight="700"
+                        fill="#fcf9f1"
+                      >
+                        {open}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
             {/* Pins */}
             {visible.map((issue) => {
               const isSel = issue.id === selectedId;
@@ -274,7 +352,8 @@ export default function CampusMap({
           )}
           <p className="mt-4 text-[13px] leading-relaxed text-faint">
             Numbers show upvotes — the bigger the number, the louder the campus
-            is about it. Pins are placed at the reported zone.
+            is about it. Pins are placed at the reported zone. Tap any building
+            to file a report there.
           </p>
         </div>
       </div>

@@ -1,3 +1,8 @@
+import {
+  CAMPUS_BUILDINGS,
+  buildingCenter,
+} from "./campus-map";
+
 export type Status = "reported" | "acknowledged" | "in-progress" | "fixed";
 
 export type Category =
@@ -69,32 +74,28 @@ export const STATUS_LABEL: Record<Status, string> = {
   fixed: "Fixed",
 };
 
-/** Named campus zones used by the schematic map and the report form. */
+/** Named campus zones — the real REC buildings, traced from Rohan's map. */
 export interface CampusZone {
   name: string;
   x: number;
   y: number;
 }
 
-export const CAMPUS_ZONES: CampusZone[] = [
-  { name: "Central Library", x: 500, y: 340 },
-  { name: "CSE Block", x: 250, y: 300 },
-  { name: "EEE Block", x: 250, y: 480 },
-  { name: "ME Block", x: 140, y: 560 },
-  { name: "ECE Block", x: 400, y: 190 },
-  { name: "Admin Block", x: 710, y: 450 },
-  { name: "Boys Hostel", x: 860, y: 240 },
-  { name: "Food Court", x: 620, y: 520 },
-  { name: "Canteen", x: 690, y: 590 },
-  { name: "Bus Bay", x: 860, y: 600 },
-  { name: "Open-air Theatre", x: 450, y: 560 },
-  { name: "Sports Ground", x: 620, y: 120 },
-];
+export const CAMPUS_ZONES: CampusZone[] = CAMPUS_BUILDINGS.map((b) => ({
+  name: b.name,
+  ...buildingCenter(b),
+}));
 
 export function zoneForLocation(location: string): CampusZone {
   const l = location.toLowerCase();
+  const exact = CAMPUS_ZONES.find((z) => l.includes(z.name.toLowerCase()));
+  if (exact) return exact;
   const hit = CAMPUS_ZONES.find((z) =>
-    l.includes(z.name.toLowerCase().replace(" block", "").replace("central ", "")),
+    z.name
+      .toLowerCase()
+      .split(/[\s-]+/)
+      .filter((w) => w.length > 3)
+      .some((w) => l.includes(w)),
   );
   return hit ?? CAMPUS_ZONES[0];
 }
@@ -104,7 +105,7 @@ const SEED: Issue[] = [
     id: "iss-wifi-library",
     title: "Wi-Fi dead zone on the library's second floor",
     category: "Network & IT",
-    location: "Central Library, 2nd Floor",
+    location: "J Block and Library, 2nd Floor",
     description:
       "The entire second-floor reading hall has had no usable Wi-Fi for four days. Pages barely load and the login portal loops forever. With CAT 2 exams starting 22 October, the reading hall is packed every evening and nobody can pull up NPTEL videos or course material. The ground floor works fine, so this looks like a dead access point, not a campus-wide outage.",
     urgency: "high",
@@ -136,15 +137,15 @@ const SEED: Issue[] = [
         steward: true,
       },
     ],
-    map: { x: 500, y: 340 },
+    map: { x: 612, y: 69 },
   },
   {
     id: "iss-streetlight-busbay",
-    title: "Streetlight out on the walkway to the bus bay",
+    title: "Streetlight out on the walkway behind Academic Block",
     category: "Safety",
-    location: "Walkway to the bus bay",
+    location: "Walkway behind Academic Block",
     description:
-      "The middle lamp on the walkway to the bus bay has been dark for a week. After 6:30 PM the stretch is pitch black, and with buses leaving till late evening, a lot of students — especially first-years — walk it alone. This is a safety issue, not a cosmetic one.",
+      "The middle lamp on the walkway behind the Academic Block has been dark for a week. After 6:30 PM the stretch is pitch black, and with students heading back to the hostels till late evening, a lot of them — especially first-years — walk it alone. This is a safety issue, not a cosmetic one.",
     urgency: "high",
     reporter: "Anonymous",
     createdAt: "2026-10-07T19:42:00+05:30",
@@ -166,13 +167,13 @@ const SEED: Issue[] = [
         at: "2026-10-08T20:14:00+05:30",
       },
     ],
-    map: { x: 810, y: 585 },
+    map: { x: 730, y: 726 },
   },
   {
     id: "iss-tubelight-204",
-    title: "Tube lights flickering non-stop in CSE Block, Room 204",
+    title: "Tube lights flickering non-stop in Main Block, Room 204",
     category: "Electrical",
-    location: "CSE Block, Room 204",
+    location: "Main Block, Room 204",
     description:
       "Two of the four tube lights in Room 204 have been flickering since last week. It's genuinely hard to sit through a full lecture — a few of us have started getting headaches by the afternoon. The room hosts back-to-back classes every day, so this affects close to 200 students a week.",
     urgency: "high",
@@ -201,13 +202,13 @@ const SEED: Issue[] = [
         at: "2026-10-10T13:40:00+05:30",
       },
     ],
-    map: { x: 250, y: 300 },
+    map: { x: 344, y: 328 },
   },
   {
     id: "iss-cn-lab-pcs",
     title: "Six systems in the CN lab won't boot past BIOS",
     category: "Network & IT",
-    location: "CN Lab, CSE Block (Ground Floor)",
+    location: "CN Lab, Main Block (Ground Floor)",
     description:
       "Systems 14 through 19 in the Computer Networks lab get stuck at the BIOS screen and never reach the OS. Lab sessions now run with students doubled up on the working machines, which makes the practicals nearly impossible to follow. Reported to the lab in-charge twice already with no movement.",
     urgency: "high",
@@ -229,13 +230,13 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 310, y: 345 },
+    map: { x: 344, y: 360 },
   },
   {
     id: "iss-cooler-foodcourt",
     title: "Drinking water cooler leaking near the food court",
     category: "Plumbing",
-    location: "Food court entrance",
+    location: "Food court, near Dominos",
     description:
       "The water cooler right at the food court entrance has been leaking from its base for days. There's a permanent puddle around it now — slippery, and right where the lunch crowd queues. Someone's going to slip if this sits through another week.",
     urgency: "medium",
@@ -252,7 +253,7 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 620, y: 520 },
+    map: { x: 362, y: 597 },
   },
   {
     id: "iss-mosquito-canteen",
@@ -270,13 +271,13 @@ const SEED: Issue[] = [
       { status: "reported", note: "Report filed anonymously.", at: "2026-10-03T17:55:00+05:30" },
     ],
     comments: [],
-    map: { x: 700, y: 595 },
+    map: { x: 998, y: 520 },
   },
   {
     id: "iss-desk-112",
     title: "Broken desks in Tutorial Room 112",
     category: "Furniture",
-    location: "EEE Block, Room 112",
+    location: "Academic Block, Room 112",
     description:
       "Four desks in Room 112 have cracked writing surfaces and wobbly legs. Two of them are genuinely unsafe to lean on. The room is used for tutorial batches of 30, so a seventh of the class is perched on broken furniture every session.",
     urgency: "medium",
@@ -298,15 +299,15 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 250, y: 480 },
+    map: { x: 730, y: 726 },
   },
   {
     id: "iss-dustbin-admin",
-    title: "Dustbins overflowing behind the admin block",
+    title: "Dustbins overflowing behind Main Block",
     category: "Cleanliness",
-    location: "Behind Admin Block",
+    location: "Behind Main Block",
     description:
-      "The bins behind the admin block haven't been cleared in days — waste is spilling onto the walkway. It's the first thing visitors see when they come for admissions enquiries. Not a great look for the college.",
+      "The bins behind Main Block haven't been cleared in days — waste is spilling onto the walkway. It's the first thing visitors see when they come for admissions enquiries. Not a great look for the college.",
     urgency: "low",
     reporter: "Ravi T",
     createdAt: "2026-10-10T08:50:00+05:30",
@@ -316,15 +317,15 @@ const SEED: Issue[] = [
       { status: "reported", note: "Report filed by Ravi T.", at: "2026-10-10T08:50:00+05:30" },
     ],
     comments: [],
-    map: { x: 735, y: 470 },
+    map: { x: 344, y: 400 },
   },
   {
     id: "iss-bench-oat",
-    title: "Benches broken in the open-air theatre",
+    title: "Benches broken in the outdoor auditorium",
     category: "Furniture",
-    location: "Open-air theatre",
+    location: "Outdoor Auditorium",
     description:
-      "Three of the concrete benches in the open-air theatre have cracked through. They're still being used because there's nowhere else to sit during club events, but the cracks are widening every week.",
+      "Three of the concrete benches in the outdoor auditorium have cracked through. They're still being used because there's nowhere else to sit during club events, but the cracks are widening every week.",
     urgency: "low",
     reporter: "Vikram S",
     createdAt: "2026-10-06T18:12:00+05:30",
@@ -334,13 +335,13 @@ const SEED: Issue[] = [
       { status: "reported", note: "Report filed by Vikram S.", at: "2026-10-06T18:12:00+05:30" },
     ],
     comments: [],
-    map: { x: 450, y: 560 },
+    map: { x: 815, y: 69 },
   },
   {
     id: "iss-fan-wobble",
-    title: "Ceiling fan wobbling dangerously in ME tutorial room",
+    title: "Ceiling fan wobbling dangerously in Workshop Block tutorial room",
     category: "Safety",
-    location: "ME Block, Tutorial Room 3",
+    location: "Workshop Block, Tutorial Room 3",
     description:
       "The ceiling fan in Tutorial Room 3 wobbles visibly at full speed — you can see the whole mounting shake. Everyone just avoids sitting under it, which tells you everything about how safe it feels.",
     urgency: "high",
@@ -367,13 +368,13 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 140, y: 560 },
+    map: { x: 489, y: 520 },
   },
   {
     id: "iss-tap-hostel",
-    title: "Tap running non-stop in Boys Hostel B-block washroom",
+    title: "Tap running non-stop in Boys Hostel washroom",
     category: "Plumbing",
-    location: "Boys Hostel B-block, 2nd Floor washroom",
+    location: "Boys Hostel, 2nd Floor washroom",
     description:
       "One tap in the second-floor washroom has been running continuously — day and night — for over a week. That's thousands of litres down the drain while the hostel talks about water conservation every summer.",
     urgency: "medium",
@@ -400,13 +401,13 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 860, y: 240 },
+    map: { x: 998, y: 623 },
   },
   {
     id: "iss-projector-ece",
-    title: "Projector dead in the ECE seminar hall",
+    title: "Projector dead in the Academic Block seminar hall",
     category: "Electrical",
-    location: "ECE Block, Seminar Hall",
+    location: "Academic Block, Seminar Hall",
     description:
       "The seminar hall projector shows nothing but a blinking amber light. Guest lectures and project reviews have all moved to a tiny portable screen for the last two weeks.",
     urgency: "medium",
@@ -433,9 +434,179 @@ const SEED: Issue[] = [
       },
     ],
     comments: [],
-    map: { x: 400, y: 190 },
+    map: { x: 730, y: 710 },
+  },
+  {
+    id: "iss-cctv-parking",
+    title: "CCTV blind spot near the Academic Block parking",
+    category: "Safety",
+    location: "Academic Block parking area",
+    description:
+      "The row of two-wheelers near the Academic Block parking sits in a complete CCTV blind spot — two cameras cover the main entrance, but the parking stretch behind the shelter is dark after 6 PM. Two mirrors went missing last month. A camera re-aim or one additional unit would close the gap.",
+    urgency: "high",
+    reporter: "Anonymous",
+    createdAt: "2026-10-08T19:40:00+05:30",
+    upvotes: 44,
+    status: "acknowledged",
+    timeline: [
+      { status: "reported", note: "Report filed.", at: "2026-10-08T19:40:00+05:30" },
+      {
+        status: "acknowledged",
+        note: "Security office confirmed the blind spot; site survey scheduled.",
+        at: "2026-10-09T10:15:00+05:30",
+      },
+    ],
+    comments: [
+      {
+        id: "cmt-cctv-1",
+        author: "Ravi K",
+        text: "My bike's mirror was one of the two. +1, this needs a camera urgently.",
+        at: "2026-10-08T21:02:00+05:30",
+      },
+    ],
+    map: { x: 800, y: 700 },
+  },
+  {
+    id: "iss-ro-cse",
+    title: "RO water purifier dry in Main Block",
+    category: "Plumbing",
+    location: "Main Block, Ground Floor",
+    description:
+      "The RO unit on the Main Block ground floor has been dispensing nothing but air for a week. The maintenance sticker says the filters were due in August. Students are walking to the Academic Block for drinking water between classes.",
+    urgency: "medium",
+    reporter: "Meera J",
+    createdAt: "2026-10-07T11:20:00+05:30",
+    upvotes: 27,
+    status: "in-progress",
+    timeline: [
+      { status: "reported", note: "Report filed by Meera J.", at: "2026-10-07T11:20:00+05:30" },
+      {
+        status: "acknowledged",
+        note: "Vendor AMC ticket raised.",
+        at: "2026-10-07T16:45:00+05:30",
+      },
+      {
+        status: "in-progress",
+        note: "Filter cartridges ordered; technician visit booked for Monday.",
+        at: "2026-10-09T09:30:00+05:30",
+      },
+    ],
+    comments: [],
+    map: { x: 330, y: 350 },
+  },
+  {
+    id: "iss-chairs-me",
+    title: "Drawing hall chairs with missing backrests",
+    category: "Furniture",
+    location: "Workshop Block, Drawing Hall 2",
+    description:
+      "Six stools in Drawing Hall 2 are missing backrests entirely — the bolts sheared off months ago. Four-hour drawing sessions on a backless stool are genuinely painful. The store room reportedly has spares.",
+    urgency: "medium",
+    reporter: "Arjun P",
+    createdAt: "2026-10-05T14:05:00+05:30",
+    upvotes: 21,
+    status: "reported",
+    timeline: [
+      { status: "reported", note: "Report filed by Arjun P.", at: "2026-10-05T14:05:00+05:30" },
+    ],
+    comments: [],
+    map: { x: 489, y: 540 },
+  },
+  {
+    id: "iss-lab-printers",
+    title: "Only one working printer for the whole library",
+    category: "Network & IT",
+    location: "J Block and Library, Reprographics Room",
+    description:
+      "Three printers are installed in the reprographics room but only one works — the other two have been showing 'toner error' since September. Before CAT 2, the queue stretches out the door every evening.",
+    urgency: "medium",
+    reporter: "Sneha R",
+    createdAt: "2026-10-04T17:55:00+05:30",
+    upvotes: 33,
+    status: "reported",
+    timeline: [
+      { status: "reported", note: "Report filed by Sneha R.", at: "2026-10-04T17:55:00+05:30" },
+    ],
+    comments: [
+      {
+        id: "cmt-print-1",
+        author: "Divya S",
+        text: "Waited 40 minutes yesterday. The working one jams if you print more than 10 pages.",
+        at: "2026-10-05T08:12:00+05:30",
+      },
+    ],
+    map: { x: 612, y: 69 },
+  },
+  {
+    id: "iss-sports-floodlight",
+    title: "Floodlight out on the Play Ground's east corner",
+    category: "Electrical",
+    location: "Play Ground, East Corner",
+    description:
+      "One of the four floodlights on the play ground is completely out, leaving the east corner pitch-black after sunset. Evening football practice has moved to half the ground. Likely a fused lamp — the other three are fine.",
+    urgency: "low",
+    reporter: "Karthik M",
+    createdAt: "2026-10-03T18:30:00+05:30",
+    upvotes: 15,
+    status: "fixed",
+    timeline: [
+      { status: "reported", note: "Report filed by Karthik M.", at: "2026-10-03T18:30:00+05:30" },
+      {
+        status: "acknowledged",
+        note: "Electrical section confirmed a fused 400W lamp.",
+        at: "2026-10-04T09:00:00+05:30",
+      },
+      {
+        status: "in-progress",
+        note: "Lamp replaced during daytime maintenance window.",
+        at: "2026-10-06T13:20:00+05:30",
+      },
+      {
+        status: "fixed",
+        note: "Tested at night; full ground lit evenly.",
+        at: "2026-10-06T20:10:00+05:30",
+      },
+    ],
+    comments: [],
+    map: { x: 700, y: 278 },
+  },
+  {
+    id: "iss-hostel-washing",
+    title: "Washing machines down to one in the boys hostel",
+    category: "Cleanliness",
+    location: "Boys Hostel, Laundry Room",
+    description:
+      "Four washing machines serve the whole hostel; three are out of order (two won't spin, one's door latch is broken). The remaining one runs from 6 AM to midnight with a waiting list on the door.",
+    urgency: "medium",
+    reporter: "Sanjay T",
+    createdAt: "2026-10-02T20:15:00+05:30",
+    upvotes: 38,
+    status: "acknowledged",
+    timeline: [
+      { status: "reported", note: "Report filed by Sanjay T.", at: "2026-10-02T20:15:00+05:30" },
+      {
+        status: "acknowledged",
+        note: "Warden's office logged a complaint with the facility vendor.",
+        at: "2026-10-03T11:40:00+05:30",
+      },
+    ],
+    comments: [
+      {
+        id: "cmt-wash-1",
+        author: "Steward",
+        steward: true,
+        text: "Vendor visit confirmed for this weekend. We'll update the timeline once the machines are serviced.",
+        at: "2026-10-04T10:00:00+05:30",
+      },
+    ],
+    map: { x: 998, y: 640 },
   },
 ];
+
+/** Seed issues (for server-side uses like OG image generation). */
+export function seedIssues(): Issue[] {
+  return deepClone(SEED).map(normalizeIssue);
+}
 
 /* ---------- persistence ---------- */
 
@@ -580,8 +751,8 @@ export function addIssue(input: NewIssueInput): { issue: Issue; photoDropped: bo
     comments: [],
     photo: input.photo,
     map: {
-      x: Math.round(Math.min(960, Math.max(40, z.x + jitter()))),
-      y: Math.round(Math.min(660, Math.max(40, z.y + jitter()))),
+      x: Math.round(Math.min(1160, Math.max(40, z.x + jitter()))),
+      y: Math.round(Math.min(760, Math.max(40, z.y + jitter()))),
     },
     timeline: [{ status: "reported", note: `Report filed by ${input.reporter.trim() || "Anonymous"}.`, at: now }],
   };
@@ -751,4 +922,37 @@ export function findSimilarIssues(query: string, issues: Issue[], limit = 2): Is
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map((x) => x.i);
+}
+
+export interface StrengthBreakdown {
+  score: number;
+  photo: number;
+  detail: number;
+  backing: number;
+  corroborated: number;
+  fresh: number;
+}
+
+/**
+ * Transparent report-strength score (0–100): how actionable a report is.
+ * Photo evidence, descriptive detail, community backing, nearby corroborating
+ * reports, and recency each contribute up to 20 points. The breakdown is
+ * shown in the UI so the number is explainable, never a black box.
+ */
+export function reportStrength(issue: Issue, all: Issue[]): StrengthBreakdown {
+  const photo = issue.photo ? 20 : 0;
+  const words = issue.description.trim().split(/\s+/).length;
+  const detail = Math.min(20, Math.round((words / 60) * 20));
+  const backing = Math.min(20, Math.round(Math.log10(1 + issue.upvotes) * 20));
+  const nearby = all.filter(
+    (o) =>
+      o.id !== issue.id &&
+      o.category === issue.category &&
+      Math.hypot(o.map.x - issue.map.x, o.map.y - issue.map.y) < 160,
+  ).length;
+  const corroborated = Math.min(20, nearby * 10);
+  const daysOld = (Date.now() - +new Date(issue.createdAt)) / 86_400_000;
+  const fresh = daysOld <= 3 ? 20 : daysOld <= 14 ? 12 : daysOld <= 60 ? 6 : 2;
+  const score = photo + detail + backing + corroborated + fresh;
+  return { score, photo, detail, backing, corroborated, fresh };
 }

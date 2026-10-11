@@ -42,41 +42,7 @@ export type CampusBuilding =
       outside?: boolean;
     };
 
-export interface CampusRoad {
-  points: [number, number][];
-  width: number;
-}
-
-export const CAMPUS_VIEWBOX = "0 0 1200 800";
-
-/** The big ring road enclosing the central campus. */
-export const CAMPUS_RING = { x: 275, y: 140, w: 650, h: 510, rx: 42, width: 26 };
-
-export const CAMPUS_ROADS: CampusRoad[] = [
-  // Connector north up to the top-row buildings
-  { points: [[400, 88], [400, 140]], width: 14 },
-  // West vertical — a single road running parallel west of the ring
-  { points: [[180, 140], [180, 650]], width: 16 },
-  // Road 10: short stub from the west road east to the ATM (outside the ring)
-  { points: [[180, 580], [215, 580]], width: 14 },
-  // Diagonal from the ring's bottom-left corner through Adhi Statue to Workshop Block
-  { points: [[317, 608], [452, 468]], width: 14 },
-  // Internal horizontal below the playground
-  { points: [[275, 400], [925, 400]], width: 16 },
-  // Internal vertical between Main Block and the playground
-  { points: [[412, 140], [412, 400]], width: 14 },
-  // Internal vertical between Workshop Block and HUT
-  { points: [[680, 400], [680, 650]], width: 14 },
-  // East connector out to the hostels
-  { points: [[925, 400], [970, 400]], width: 14 },
-  // South horizontal
-  { points: [[350, 672], [925, 672]], width: 14 },
-  // South connectors down to Rec Cafe / Academic Block
-  { points: [[584, 650], [584, 672]], width: 12 },
-  { points: [[730, 650], [730, 672]], width: 12 },
-  // South vertical
-  { points: [[820, 650], [820, 800]], width: 14 },
-];
+export const CAMPUS_VIEWBOX = "0 0 1200 960";
 
 export const CAMPUS_BUILDINGS: CampusBuilding[] = [
   // — North strip —
@@ -85,7 +51,7 @@ export const CAMPUS_BUILDINGS: CampusBuilding[] = [
   { id: "park", name: "PARK", kind: "rect", x: 487, y: 48, w: 52, h: 42, tone: "green" },
   { id: "j-block", name: "J BLOCK AND LIBRARY", kind: "rect", x: 549, y: 40, w: 125, h: 58 },
   { id: "coffee-day", name: "COFFEE DAY", kind: "rect", x: 684, y: 52, w: 48, h: 36 },
-  { id: "outdoor-auditorium", name: "OUTDOOR AUDITORIUM", kind: "rect", x: 742, y: 35, w: 145, h: 68 },
+  { id: "indoor-auditorium", name: "INDOOR AUDITORIUM", kind: "rect", x: 742, y: 35, w: 145, h: 68 },
   { id: "munch-mode", name: "MUNCH MODE", kind: "rect", x: 897, y: 50, w: 68, h: 40 },
   // — Inside the ring —
   { id: "tech-lounge", name: "TECH LOUNGE", kind: "rect", x: 305, y: 180, w: 62, h: 30, outside: true, lx: 336, ly: 158 },
@@ -115,10 +81,10 @@ export const CAMPUS_BUILDINGS: CampusBuilding[] = [
   { id: "rec-cafe", name: "REC CAFE", kind: "rect", x: 545, y: 695, w: 78, h: 48 },
   { id: "court-yard", name: "COURT YARD", kind: "rect", x: 545, y: 750, w: 72, h: 26, tone: "green" },
   { id: "academic-block", name: "ACADEMIC BLOCK", kind: "rect", x: 645, y: 690, w: 170, h: 72 },
-  { id: "idea-factory", name: "IDEA FACTORY", kind: "rect", x: 350, y: 695, w: 85, h: 95 },
-  { id: "tifac", name: "TIFAC", kind: "rect", x: 450, y: 695, w: 85, h: 95 },
-  { id: "wukon", name: "WUKON", kind: "rect", x: 850, y: 695, w: 38, h: 32 },
-  { id: "yipee", name: "YIPPEE", kind: "rect", x: 850, y: 735, w: 38, h: 32, outside: true, lx: 869, ly: 779 },
+  { id: "idea-factory", name: "IDEA FACTORY", kind: "rect", x: 505, y: 795, w: 70, h: 110 },
+  { id: "tifac", name: "TIFAC", kind: "rect", x: 667, y: 795, w: 70, h: 110 },
+  { id: "wukon", name: "WUKON", kind: "rect", x: 803, y: 810, w: 38, h: 32 },
+  { id: "yipee", name: "YIPPEE", kind: "rect", x: 803, y: 850, w: 38, h: 32, outside: true, lx: 878, ly: 866 },
 ];
 
 export function buildingCenter(b: CampusBuilding): { x: number; y: number } {

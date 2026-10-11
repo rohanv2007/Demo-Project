@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STATUS_LABEL, type Issue, type Status } from "@/lib/issues";
 import {
   CAMPUS_BUILDINGS,
-  CAMPUS_RING,
-  CAMPUS_ROADS,
   CAMPUS_VIEWBOX,
   buildingBounds,
   type CampusBuilding,
@@ -24,8 +22,6 @@ const TONE_FILL: Record<string, string> = {
   water: "#d8e5ed",
 };
 
-const ROAD_STROKE = "#c4b795";
-
 const PIN_FILL: Record<Status, string> = {
   reported: "#1d1710",
   acknowledged: "#a97a0c",
@@ -34,6 +30,25 @@ const PIN_FILL: Record<Status, string> = {
 };
 
 type Filter = "all" | "open" | "fixed";
+
+/* Scroll-wheel zoom, centered on the cursor. Derived from the viewBox. */
+const [BASE_W, BASE_H] = CAMPUS_VIEWBOX.split(" ").slice(2).map(Number);
+const BASE_VIEW = { x: 0, y: 0, w: BASE_W, h: BASE_H };
+const MIN_VIEW_W = 300;
+
+type ViewBox = { x: number; y: number; w: number; h: number };
+
+function zoomView(v: ViewBox, factor: number, px: number, py: number): ViewBox {
+  const w = Math.min(BASE_VIEW.w, Math.max(MIN_VIEW_W, v.w * factor));
+  const h = (w * BASE_VIEW.h) / BASE_VIEW.w;
+  const s = w / v.w;
+  return {
+    w,
+    h,
+    x: Math.min(Math.max(px - (px - v.x) * s, 0), BASE_VIEW.w - w),
+    y: Math.min(Math.max(py - (py - v.y) * s, 0), BASE_VIEW.h - h),
+  };
+}
 
 /** Width estimate for an uppercase semibold map label, including letter-spacing. */
 function textWidth(text: string, size: number): number {
@@ -129,6 +144,64 @@ export default function CampusMap({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const router = useRouter();
 
+  /* Wheel zoom state — viewBox driven, eased, clamped, cursor-centered. */
+  const [view, setView] = useState<ViewBox>(BASE_VIEW);
+  const viewRef = useRef<ViewBox>(BASE_VIEW);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const animRef = useRef<number | null>(null);
+
+  function animateViewTo(target: ViewBox) {
+    if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    const from = viewRef.current;
+    const start = performance.now();
+    const dur = 150;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / dur);
+      const e = 1 - Math.pow(1 - k, 3);
+      const v: ViewBox = {
+        x: from.x + (target.x - from.x) * e,
+        y: from.y + (target.y - from.y) * e,
+        w: from.w + (target.w - from.w) * e,
+        h: from.h + (target.h - from.h) * e,
+      };
+      viewRef.current = v;
+      setView(v);
+      animRef.current = k < 1 ? requestAnimationFrame(step) : null;
+    };
+    animRef.current = requestAnimationFrame(step);
+  }
+
+  function zoomAt(clientX: number, clientY: number, factor: number) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+    animateViewTo(zoomView(viewRef.current, factor, pt.x, pt.y));
+  }
+
+  function zoomCenter(factor: number) {
+    const v = viewRef.current;
+    animateViewTo(zoomView(v, factor, v.x + v.w / 2, v.y + v.h / 2));
+  }
+
+  /* Non-passive wheel listener: the wheel zooms only while over the map,
+     so normal page scrolling is untouched everywhere else. */
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 1.18 : 1 / 1.18);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
   const visible = useMemo(
     () =>
       issues.filter((i) => {
@@ -199,38 +272,42 @@ export default function CampusMap({
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
         {/* Map */}
-        <div className="overflow-hidden rounded-[4px] border border-line bg-cream">
+        <div
+          ref={wrapRef}
+          className="relative overflow-hidden rounded-[4px] border border-line bg-cream"
+        >
+          {/* Zoom controls */}
+          <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
+            <button
+              onClick={() => zoomCenter(1 / 1.4)}
+              aria-label="Zoom in"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[3px] border border-line bg-cream text-[16px] font-semibold text-ink transition-colors hover:border-ink"
+            >
+              +
+            </button>
+            <button
+              onClick={() => zoomCenter(1.4)}
+              aria-label="Zoom out"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[3px] border border-line bg-cream text-[16px] font-semibold text-ink transition-colors hover:border-ink"
+            >
+              −
+            </button>
+            <button
+              onClick={() => animateViewTo(BASE_VIEW)}
+              aria-label="Reset zoom"
+              title="Reset zoom"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[3px] border border-line bg-cream text-[14px] font-semibold text-ink transition-colors hover:border-ink"
+            >
+              ⟲
+            </button>
+          </div>
           <svg
-            viewBox={CAMPUS_VIEWBOX}
+            ref={svgRef}
+            viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
             className="block h-auto w-full"
             role="img"
             aria-label="REC campus map with issue pins"
           >
-            {/* Ring road */}
-            <rect
-              x={CAMPUS_RING.x}
-              y={CAMPUS_RING.y}
-              width={CAMPUS_RING.w}
-              height={CAMPUS_RING.h}
-              rx={CAMPUS_RING.rx}
-              fill="none"
-              stroke={ROAD_STROKE}
-              strokeWidth={CAMPUS_RING.width}
-              aria-hidden="true"
-            />
-            {/* Roads */}
-            {CAMPUS_ROADS.map((r, i) => (
-              <polyline
-                key={i}
-                points={r.points.map((p) => p.join(",")).join(" ")}
-                fill="none"
-                stroke={ROAD_STROKE}
-                strokeWidth={r.width}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              />
-            ))}
             {/* Buildings — tap one to file a report there */}
             {CAMPUS_BUILDINGS.map((b) => {
               const label = layoutLabel(b);
@@ -462,7 +539,7 @@ export default function CampusMap({
           <p className="mt-4 text-[13px] leading-relaxed text-faint">
             Numbers show upvotes — the bigger the number, the louder the campus
             is about it. Pins are placed at the reported zone. Tap any building
-            to file a report there.
+            to file a report there. Scroll over the map to zoom in and out.
           </p>
         </div>
       </div>

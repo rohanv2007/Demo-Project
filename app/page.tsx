@@ -1,0 +1,227 @@
+"use client";
+
+import Link from "next/link";
+import { useIssues } from "@/hooks/useIssues";
+import { boardStats } from "@/lib/issues";
+import Kicker from "@/components/Kicker";
+import Stat from "@/components/Stat";
+import Ticker from "@/components/Ticker";
+import IssueCard from "@/components/IssueCard";
+import StatusPill from "@/components/StatusPill";
+import UpvoteButton from "@/components/UpvoteButton";
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Spot it",
+    body: "The flickering tube light, the leaking tap, the dead Wi-Fi zone. If it bugs you every day, it bugs a hundred others too.",
+  },
+  {
+    n: "02",
+    title: "Report it in 30 seconds",
+    body: "One form. No account, no login, no chain of emails. Anonymous if you prefer — the issue matters, not who filed it.",
+  },
+  {
+    n: "03",
+    title: "Rally the campus",
+    body: "Fellow students upvote what hits them hardest. The board sorts itself by what the campus actually cares about.",
+  },
+  {
+    n: "04",
+    title: "Watch it get fixed",
+    body: "Every status change is logged on a public timeline — acknowledged, in progress, fixed. Sunlight, applied.",
+  },
+];
+
+export default function Home() {
+  const { issues, upvotedIds, ready, toggleUpvote } = useIssues();
+  const stats = boardStats(issues);
+  const fixed = issues.filter((i) => i.status === "fixed");
+  const fresh = issues
+    .filter((i) => i.status !== "fixed")
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+    .slice(0, 3);
+
+  return (
+    <div>
+      {/* ---------- Hero ---------- */}
+      <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 md:pb-20 md:pt-20">
+        <Kicker>A public fix-list · Rajalakshmi Engineering College</Kicker>
+        <h1 className="mt-6 max-w-4xl font-display text-[44px] font-semibold leading-[1.04] tracking-tight md:text-[76px]">
+          See it. <em className="text-signal">Report it.</em>
+          <br />
+          Get it fixed.
+        </h1>
+        <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-soot md:text-[18px]">
+          Broken tube lights, leaking taps, dead Wi-Fi zones — post what you
+          spot on campus, rally upvotes from fellow students, and watch each
+          issue move from reported to fixed. Out in the open, where ignoring it
+          is no longer an option.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/report"
+            className="lift rounded-[3px] bg-signal px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.12em] text-cream"
+          >
+            Report an issue
+          </Link>
+          <Link
+            href="/issues"
+            className="lift rounded-[3px] border border-ink px-6 py-3.5 text-[13px] font-semibold uppercase tracking-[0.12em] text-ink"
+          >
+            Browse the board
+          </Link>
+        </div>
+
+        {/* Stats band */}
+        <div className="mt-14 grid grid-cols-2 gap-8 border-t border-line pt-8 md:grid-cols-4">
+          <Stat value={ready ? String(stats.total) : "–"} label="Reports filed" />
+          <Stat value={ready ? String(stats.fixed) : "–"} label="Fixed this term" accent />
+          <Stat
+            value={ready ? (stats.avgDaysToFix !== null ? `${stats.avgDaysToFix}d` : "–") : "–"}
+            label="Avg. days to fix"
+          />
+          <Stat value={ready ? String(stats.open) : "–"} label="Open right now" />
+        </div>
+      </section>
+
+      {/* ---------- Fixed ticker ---------- */}
+      <Ticker fixed={fixed} />
+
+      {/* ---------- Loudest on campus ---------- */}
+      {(() => {
+        const loudest = issues
+          .filter((i) => i.status !== "fixed")
+          .sort((a, b) => b.upvotes - a.upvotes)[0];
+        if (!loudest) return null;
+        return (
+          <section className="mx-auto max-w-6xl px-5 pt-16 md:pt-24">
+            <div className="lift rounded-[4px] border border-ink bg-cream p-6 md:p-10">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Kicker>Loudest on campus right now</Kicker>
+                <StatusPill status={loudest.status} />
+              </div>
+              <Link href={`/issues/${loudest.id}`} className="group mt-4 block">
+                <h2 className="max-w-3xl font-display text-[30px] font-semibold leading-[1.12] tracking-tight group-hover:text-signal md:text-[46px]">
+                  {loudest.title}
+                </h2>
+              </Link>
+              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-soot md:text-[16px]">
+                {loudest.description.split(".")[0]}.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <UpvoteButton
+                  size="lg"
+                  count={loudest.upvotes}
+                  active={upvotedIds.includes(loudest.id)}
+                  onToggle={() => toggleUpvote(loudest.id)}
+                />
+                <span className="text-[13px] uppercase tracking-[0.14em] text-faint">
+                  {loudest.location} · {loudest.reporter}
+                </span>
+                <Link
+                  href={`/issues/${loudest.id}`}
+                  className="u-sweep ml-auto text-[13px] font-semibold uppercase tracking-[0.14em] text-soot"
+                >
+                  Read the full report →
+                </Link>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* ---------- How it works ---------- */}
+      <section className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+        <Kicker>How it works</Kicker>
+        <h2 className="mt-4 max-w-2xl font-display text-[32px] font-semibold leading-tight tracking-tight md:text-[44px]">
+          Four steps between <em className="text-signal">“someone should…”</em>{" "}
+          and <em>done</em>.
+        </h2>
+        <div className="mt-10 border-t border-line">
+          {STEPS.map((s) => (
+            <div
+              key={s.n}
+              className="step-row grid gap-2 border-b border-line px-2 py-7 md:grid-cols-[80px_220px_1fr] md:gap-8 md:px-4"
+            >
+              <p className="font-display text-[15px] italic text-faint">{s.n}</p>
+              <h3 className="font-display text-[24px] font-semibold tracking-tight">
+                {s.title}
+              </h3>
+              <p className="max-w-xl text-[15px] leading-relaxed text-soot">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------- Fresh on the board ---------- */}
+      <section className="mx-auto max-w-6xl px-5 pb-4">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <Kicker>Fresh on the board</Kicker>
+            <h2 className="mt-4 font-display text-[32px] font-semibold tracking-tight md:text-[40px]">
+              Latest reports
+            </h2>
+          </div>
+          <Link
+            href="/issues"
+            className="u-sweep hidden shrink-0 text-[13px] font-semibold uppercase tracking-[0.14em] text-soot md:inline-block"
+          >
+            View the full board →
+          </Link>
+        </div>
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
+          {fresh.map((issue) => (
+            <IssueCard
+              key={issue.id}
+              issue={issue}
+              upvoted={upvotedIds.includes(issue.id)}
+              onToggleUpvote={toggleUpvote}
+            />
+          ))}
+        </div>
+        <Link
+          href="/issues"
+          className="u-sweep mt-8 inline-block text-[13px] font-semibold uppercase tracking-[0.14em] text-soot md:hidden"
+        >
+          View the full board →
+        </Link>
+      </section>
+
+      {/* ---------- Manifesto ---------- */}
+      <section className="mt-20 bg-sand/60">
+        <div className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+          <Kicker>Why this exists</Kicker>
+          <blockquote className="mt-6 max-w-4xl font-display text-[28px] font-medium italic leading-[1.35] tracking-tight md:text-[44px]">
+            “Every campus has a list of things everyone complains about and
+            nobody files. This board turns hallway grumbling into a queue that
+            can actually be worked through.”
+          </blockquote>
+          <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.18em] text-faint">
+            The FixMyCampus thesis
+          </p>
+        </div>
+      </section>
+
+      {/* ---------- CTA ---------- */}
+      <section className="mx-auto max-w-6xl px-5 py-16 md:py-24">
+        <div className="rounded-[4px] border border-ink bg-cream px-6 py-12 text-center md:py-16">
+          <Kicker className="justify-center">Your turn</Kicker>
+          <h2 className="mx-auto mt-4 max-w-2xl font-display text-[30px] font-semibold leading-tight tracking-tight md:text-[44px]">
+            Something broken on campus right now?
+          </h2>
+          <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-soot">
+            Put it on the board. Thirty seconds, no account needed — and the
+            whole campus can back you up.
+          </p>
+          <Link
+            href="/report"
+            className="lift mt-8 inline-block rounded-[3px] bg-signal px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.12em] text-cream"
+          >
+            File a report
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f1e5;
+  --color-cream: #fcf9f1;
+  --color-sand: #ebe1cb;
+  --color-line: #dcd0b4;
+  --color-ink: #1d1710;
+  --color-soot: #57503f;
+  --color-faint: #8b7f66;
+  --color-signal: #d64520;
+  --color-ember: #a82f12;
+  --color-moss: #2f6e4e;
+  --color-gold: #a97a0c;
+
+  --font-display: var(--font-fraunces), "Georgia", serif;
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fine film grain over everything — keeps the paper feeling printed, not digital */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-signal);
+  color: var(--color-cream);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 3px;
+}
+
+/* Ticker */
+@keyframes fmc-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: fmc-marquee 36s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Card lift */
+.lift {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-ink);
+  box-shadow: 0 14px 30px -18px rgba(29, 23, 16, 0.45);
+}
+
+/* Underline sweep for nav links */
+.u-sweep {
+  position: relative;
+}
+.u-sweep::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1.5px;
+  width: 100%;
+  background: var(--color-signal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.u-sweep:hover::after,
+.u-sweep[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+/* Dashed "cut here" divider */
+.cut-line {
+  background-image: linear-gradient(
+    to right,
+    var(--color-line) 55%,
+    transparent 45%
+  );
+  background-size: 10px 1px;
+  background-repeat: repeat-x;
+  height: 1px;
+}
+
+/* Numbered editorial rows */
+.step-row {
+  transition: background-color 0.25s ease;
+}
+.step-row:hover {
+  background-color: var(--color-cream);
+}
+
+/* Thin styled scrollbar for filter rails */
+.thin-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--font-sans);
+}

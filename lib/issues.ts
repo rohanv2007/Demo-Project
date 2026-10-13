@@ -112,6 +112,14 @@ const UPVOTED_KEY = "fixmycampus.upvoted.v1";
 const MINE_KEY = "fixmycampus.my-issues.v1";
 const STEWARD_KEY = "fixmycampus.steward.v1";
 
+/** Wipe every FixMyCampus key from localStorage — issues, upvotes, my-issues. Steward session is kept. */
+export function resetAllData(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(ISSUES_KEY);
+  window.localStorage.removeItem(UPVOTED_KEY);
+  window.localStorage.removeItem(MINE_KEY);
+}
+
 export function isStewardSession(): boolean {
   if (typeof window === "undefined") return false;
   try {

@@ -10,6 +10,7 @@ import {
   daysOpen,
   timeAgo,
   updateIssueStatus,
+  resetAllData,
   type Category,
   type Issue,
   type Status,
@@ -440,6 +441,31 @@ export default function StewardPage() {
       )}
 
       <ActivityFeed issues={issues} />
+
+      <section aria-label="Danger zone" className="mt-12 rounded-[4px] border border-signal/40 bg-cream p-6">
+        <h2 className="font-display text-[20px] font-semibold tracking-tight text-signal">
+          Danger zone
+        </h2>
+        <p className="mt-1 max-w-2xl text-[14px] leading-relaxed text-soot">
+          Wipe every report, upvote, and personal list from this browser. This
+          cannot be undone.
+        </p>
+        <button
+          onClick={() => {
+            if (
+              window.confirm(
+                "Reset all FixMyCampus data? Every report will be permanently deleted from this browser.",
+              )
+            ) {
+              resetAllData();
+              window.location.reload();
+            }
+          }}
+          className="mt-4 rounded-[3px] border border-signal px-5 py-2.5 text-[13px] font-semibold uppercase tracking-[0.12em] text-signal transition-colors hover:bg-signal hover:text-cream"
+        >
+          Reset all data
+        </button>
+      </section>
     </div>
   );
 }
